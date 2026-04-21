@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusAluno {
+  ativo
+  inadimplente
+  inativo
+}
+
+model Plano {
+  id        Int     @id @default(autoincrement())
+  nome      String
+  duracao   Int
+  valor     Decimal @db.Decimal(10, 2)
+  descricao String?
+  alunos    Aluno[]
+}
+
+model Aluno {
+  id             Int         @id @default(autoincrement())
+  nome           String
+  cpf            String      @unique
+  whatsapp       String
+  dataNascimento DateTime    @db.Date
+  dataVencimento DateTime    @db.Date
+  status         StatusAluno @default(ativo)
+  avatar         String?
+  dataCadastro   DateTime    @default(now())
+  planoId        Int
+  plano          Plano       @relation(fields: [planoId], references: [id], onDelete: Restrict)
+}
