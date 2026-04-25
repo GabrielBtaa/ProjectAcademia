@@ -6,6 +6,8 @@ import Alunos from './pages/Alunos';
 import Financeiro from './pages/Financeiro';
 import Configuracoes from './pages/Configuracoes';
 
+const backend = import.meta.env.VITE_BACKEND;
+
 // Mapa de páginas: ID → { componente, título }
 const PAGES = {
   dashboard: { component: Dashboard, title: 'Dashboard' },
