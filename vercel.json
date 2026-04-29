@@ -1,8 +1,8 @@
 {
-  "version": 2,
+  "framework": null,
   "builds": [
     {
-      "src": "backend/api/index.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     },
     {
@@ -13,11 +13,13 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/api/index.js"
+      "dest": "api/index.js"
     },
     {
       "src": "/(.*)",
       "dest": "frontend/dist/$1"
     }
-  ]
+  ],
+  "installCommand": "cd backend && npm install && npx prisma generate",
+  "buildCommand": "cd frontend && npm install && npm run build"
 }
