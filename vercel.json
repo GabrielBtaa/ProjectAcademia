@@ -12,7 +12,23 @@
   ],
   "routes": [
     {
+      "src": "/api",
+      "dest": "api/index.js"
+    },
+    {
       "src": "/api/(.*)",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/health",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/planos",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/alunos",
       "dest": "api/index.js"
     },
     {
