@@ -6,7 +6,9 @@ import { prisma } from "./lib/prisma.js";
 const app = express();
 
 const corsOrigins = process.env.FRONTEND_ORIGIN
-  ? process.env.FRONTEND_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean)
+  ? process.env.FRONTEND_ORIGIN.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
   : true;
 
 app.use(cors({ origin: corsOrigins }));
@@ -82,8 +84,23 @@ app.get("/api/alunos", async (req, res) => {
 });
 
 app.post("/api/alunos", async (req, res) => {
-  const { nome, cpf, whatsapp, dataNascimento, planoId, dataVencimento, status } = req.body || {};
-  if (!nome || !cpf || !whatsapp || !dataNascimento || !planoId || !dataVencimento) {
+  const {
+    nome,
+    cpf,
+    whatsapp,
+    dataNascimento,
+    planoId,
+    dataVencimento,
+    status,
+  } = req.body || {};
+  if (
+    !nome ||
+    !cpf ||
+    !whatsapp ||
+    !dataNascimento ||
+    !planoId ||
+    !dataVencimento
+  ) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
   try {
@@ -112,9 +129,25 @@ app.post("/api/alunos", async (req, res) => {
 
 app.put("/api/alunos/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "ID inválido" });
-  const { nome, cpf, whatsapp, dataNascimento, planoId, dataVencimento, status } = req.body || {};
-  if (!nome || !cpf || !whatsapp || !dataNascimento || !planoId || !dataVencimento) {
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "ID inválido" });
+  const {
+    nome,
+    cpf,
+    whatsapp,
+    dataNascimento,
+    planoId,
+    dataVencimento,
+    status,
+  } = req.body || {};
+  if (
+    !nome ||
+    !cpf ||
+    !whatsapp ||
+    !dataNascimento ||
+    !planoId ||
+    !dataVencimento
+  ) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
   try {
@@ -147,7 +180,8 @@ app.put("/api/alunos/:id", async (req, res) => {
 
 app.delete("/api/alunos/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "ID inválido" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "ID inválido" });
   try {
     await prisma.aluno.delete({ where: { id } });
     res.status(204).end();
