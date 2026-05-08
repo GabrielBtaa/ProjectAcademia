@@ -1,9 +1,13 @@
 import "./lib/load-env.js";
 import express from "express";
 import cors from "cors";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { prisma } from "./lib/prisma.js";
 
 const app = express();
+
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
 
 const corsOrigins = process.env.FRONTEND_ORIGIN
   ? process.env.FRONTEND_ORIGIN.split(",")
@@ -57,6 +61,153 @@ app.get("/api/health", async (req, res) => {
     res.json({ ok: true, message: "Backend rodando", db: true });
   } catch {
     res.status(503).json({ ok: false, message: "Backend rodando", db: false });
+  }
+});
+
+// Função para criar usuário admin se não existir
+async function ensureAdminUser() {
+  try {
+    const adminExists = await prisma.user.findFirst({
+      where: { email: "admin@academia.com" }
+    });
+
+    if (!adminExists) {
+      const hashedPassword = await bcrypt.hash("admin123", 10);
+      await prisma.user.create({
+        data: {
+          email: "admin@academia.com",
+          password: hashedPassword,
+          role: "ADMIN",
+          nome: "Administrador"
+        }
+      });
+      console.log("Usuário administrador criado");
+    }
+  } catch (error) {
+    console.error("Erro ao criar admin:", error);
+  }
+}
+
+// Login
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email e senha são obrigatórios" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: "Credenciais inválidas" });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: "Credenciais inválidas" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        nome: user.nome,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("Erro no login:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+// Registro
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { email, password, nome } = req.body || {};
+
+    if (!email || !password || !nome) {
+      return res.status(400).json({ error: "Email, senha e nome são obrigatórios" });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: "Email já cadastrado" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        nome,
+        role: "USER"
+      }
+    });
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        nome: user.nome,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("Erro no registro:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+// Verificar token
+app.get("/api/auth/verify", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "Token não fornecido" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: "Usuário não encontrado" });
+    }
+
+    return res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        nome: user.nome,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    return res.status(401).json({ error: "Token inválido" });
   }
 });
 
@@ -229,5 +380,18 @@ app.post("/api/pagamentos", async (req, res) => {
   }
 });
 
-// Export para Vercel
-export default app;
+// Handler para Vercel
+export default function handler(req, res) {
+  // Define CORS headers
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // Delegate to Express app
+  return app(req, res);
+}
