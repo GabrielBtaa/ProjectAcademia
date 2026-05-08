@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -10,10 +11,29 @@ const PLANOS = [
 ];
 
 async function main() {
-  const count = await prisma.plano.count();
-  if (count > 0) return;
+  // Criar planos se não existirem
+  const countPlanos = await prisma.plano.count();
+  if (countPlanos === 0) {
+    await prisma.plano.createMany({ data: PLANOS });
+  }
 
-  await prisma.plano.createMany({ data: PLANOS });
+  // Criar usuário administrador se não existir
+  const adminExists = await prisma.user.findFirst({
+    where: { email: "admin@academia.com" }
+  });
+
+  if (!adminExists) {
+    const hashedPassword = await bcrypt.hash("admin123", 10);
+    await prisma.user.create({
+      data: {
+        email: "admin@academia.com",
+        password: hashedPassword,
+        role: "admin",
+        nome: "Administrador"
+      }
+    });
+    console.log("Usuário administrador criado: admin@academia.com / admin123");
+  }
 }
 
 main()

@@ -194,5 +194,40 @@ app.delete("/api/alunos/:id", async (req, res) => {
   }
 });
 
+app.get("/api/pagamentos", async (req, res) => {
+  try {
+    const pagamentos = await prisma.pagamento.findMany({
+      include: { aluno: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(pagamentos);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Erro ao buscar pagamentos" });
+  }
+});
+
+app.post("/api/pagamentos", async (req, res) => {
+  const { valor, data, status, alunoId } = req.body;
+  if (!valor || !data || !alunoId) {
+    return res.status(400).json({ error: "Valor, data e alunoId são obrigatórios" });
+  }
+  try {
+    const created = await prisma.pagamento.create({
+      data: {
+        valor: Number(valor),
+        data: new Date(String(data) + "T12:00:00"),
+        status: status || "pendente",
+        alunoId: Number(alunoId),
+      },
+      include: { aluno: true },
+    });
+    res.status(201).json(created);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Erro ao criar pagamento" });
+  }
+});
+
 // Export para Vercel
 export default app;

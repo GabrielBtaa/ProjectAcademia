@@ -146,11 +146,11 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
             >
-              AD
+              US
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-semibold truncate">Admin</p>
-              <p className="text-xs truncate" style={{ color: '#6b7280' }}>admin@gymflow.com</p>
+              <p className="text-white text-xs font-semibold truncate">Usuário</p>
+              <p className="text-xs truncate" style={{ color: '#6b7280' }}>Conectado</p>
             </div>
             <button className="text-gray-500 hover:text-red-400 transition-colors" title="Sair">
               <LogOut size={15} />
@@ -162,7 +162,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
             className="rounded-lg px-3 py-2 text-center"
             style={{ background: 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
           >
-            <p style={{ color: '#3b82f6', fontSize: '0.65rem', fontWeight: 600 }}>GymFlow v1.0 · Plano Pro</p>
+            <p style={{ color: '#3b82f6', fontSize: '0.65rem', fontWeight: 600 }}>Versão 1.0</p>
           </div>
         </div>
       </aside>

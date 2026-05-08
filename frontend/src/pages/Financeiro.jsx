@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   DollarSign,
@@ -12,7 +12,7 @@ import {
   TrendingUp,
   PackagePlus,
 } from 'lucide-react';
-import { PLANOS_MOCK, PAGAMENTOS_MOCK, ALUNOS_MOCK } from '../data/mockData';
+import { apiUrl } from '../lib/api';
 
 // ===== Sub-componente: Modal de Plano =====
 function PlanoModal({ plano, onClose, onSave }) {
@@ -79,7 +79,7 @@ function PlanoModal({ plano, onClose, onSave }) {
 }
 
 // ===== Sub-componente: Modal de Registrar Pagamento =====
-function PagamentoModal({ onClose, onSave }) {
+function PagamentoModal({ alunos, planos, onClose, onSave }) {
   const [form, setForm] = useState({
     alunoId: '',
     valor: '',
@@ -90,12 +90,11 @@ function PagamentoModal({ onClose, onSave }) {
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
-    // Preenche o valor do plano ao selecionar o aluno
     if (field === 'alunoId') {
-      const aluno = ALUNOS_MOCK.find(a => a.id === Number(value));
+      const aluno = alunos.find(a => a.id === Number(value));
       if (aluno) {
-        const plano = PLANOS_MOCK.find(p => p.nome === aluno.plano);
-        if (plano) setForm(prev => ({ ...prev, alunoId: value, valor: plano.valor }));
+        const plano = planos.find(p => p.id === aluno.planoId);
+        setForm(prev => ({ ...prev, alunoId: value, valor: plano ? plano.valor : prev.valor }));
       }
     }
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
@@ -112,14 +111,15 @@ function PagamentoModal({ onClose, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    const aluno = ALUNOS_MOCK.find(a => a.id === Number(form.alunoId));
+    const aluno = alunos.find(a => a.id === Number(form.alunoId));
     onSave({
-      ...form,
       alunoId: Number(form.alunoId),
-      aluno: aluno?.nome,
-      plano: aluno?.plano,
       valor: Number(form.valor),
+      data: form.data,
       status: 'confirmado',
+      metodo: form.metodo,
+      aluno: aluno?.nome || '',
+      plano: aluno?.plano || '',
     });
   };
 
@@ -142,7 +142,7 @@ function PagamentoModal({ onClose, onSave }) {
             <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Aluno *</label>
             <select className="input-field" value={form.alunoId} onChange={e => handleChange('alunoId', e.target.value)} style={{ colorScheme: 'dark' }}>
               <option value="" style={{ background: '#0d1528' }}>Selecione o aluno...</option>
-              {ALUNOS_MOCK.map(a => (
+              {alunos.map(a => (
                 <option key={a.id} value={a.id} style={{ background: '#0d1528' }}>
                   {a.nome} – {a.plano}
                 </option>
@@ -202,38 +202,115 @@ function PagamentoModal({ onClose, onSave }) {
  * Gestão de planos + registro de pagamentos com histórico.
  */
 export default function Financeiro() {
-  const [planos, setPlanos] = useState(PLANOS_MOCK);
-  const [pagamentos, setPagamentos] = useState(PAGAMENTOS_MOCK);
+  const [planos, setPlanos] = useState([]);
+  const [alunos, setAlunos] = useState([]);
+  const [pagamentos, setPagamentos] = useState([]);
   const [modalPlano, setModalPlano] = useState(false);
   const [modalPagamento, setModalPagamento] = useState(false);
   const [planoEditando, setPlanoEditando] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Total faturado
+  useEffect(() => {
+    const carregarDados = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [planosRes, alunosRes, pagamentosRes] = await Promise.all([
+          fetch(apiUrl('/api/planos')),
+          fetch(apiUrl('/api/alunos')),
+          fetch(apiUrl('/api/pagamentos')),
+        ]);
+
+        if (!planosRes.ok || !alunosRes.ok || !pagamentosRes.ok) {
+          const message = !planosRes.ok
+            ? await planosRes.text()
+            : !alunosRes.ok
+            ? await alunosRes.text()
+            : await pagamentosRes.text();
+          throw new Error(message || 'Erro ao carregar dados do servidor');
+        }
+
+        const planosData = await planosRes.json();
+        const alunosData = await alunosRes.json();
+        const pagamentosData = await pagamentosRes.json();
+
+        setPlanos(planosData);
+        setAlunos(alunosData);
+        setPagamentos(pagamentosData);
+      } catch (fetchError) {
+        console.error('Erro ao carregar dados financeiros:', fetchError);
+        setError(fetchError.message || 'Falha ao carregar dados financeiros');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarDados();
+  }, []);
+
   const totalFaturado = useMemo(() =>
-    pagamentos.filter(p => p.status === 'confirmado').reduce((acc, p) => acc + p.valor, 0),
+    pagamentos.filter(p => p.status === 'confirmado').reduce((acc, p) => acc + Number(p.valor), 0),
     [pagamentos]
   );
 
-  const handleSalvarPlano = (dados) => {
-    if (planoEditando) {
-      setPlanos(prev => prev.map(p => p.id === planoEditando.id ? { ...p, ...dados } : p));
-    } else {
-      const novoId = Math.max(...planos.map(p => p.id)) + 1;
-      setPlanos(prev => [...prev, { ...dados, id: novoId }]);
+  const handleSalvarPlano = async (dados) => {
+    try {
+      if (planoEditando) {
+        const response = await fetch(apiUrl(`/api/planos/${planoEditando.id}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        const updated = await response.json();
+        setPlanos(prev => prev.map(p => p.id === updated.id ? updated : p));
+      } else {
+        const response = await fetch(apiUrl('/api/planos'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        const created = await response.json();
+        setPlanos(prev => [created, ...prev]);
+      }
+    } catch (saveError) {
+      console.error('Erro ao salvar plano:', saveError);
+      setError('Não foi possível salvar o plano');
+    } finally {
+      setModalPlano(false);
+      setPlanoEditando(null);
     }
-    setModalPlano(false);
-    setPlanoEditando(null);
   };
 
-  const handleSalvarPagamento = (dados) => {
-    const novoId = Math.max(...pagamentos.map(p => p.id)) + 1;
-    setPagamentos(prev => [{ ...dados, id: novoId }, ...prev]);
-    setModalPagamento(false);
+  const handleSalvarPagamento = async (dados) => {
+    try {
+      const response = await fetch(apiUrl('/api/pagamentos'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const created = await response.json();
+      setPagamentos(prev => [created, ...prev]);
+    } catch (saveError) {
+      console.error('Erro ao salvar pagamento:', saveError);
+      setError('Não foi possível registrar o pagamento');
+    } finally {
+      setModalPagamento(false);
+    }
   };
 
-  const handleExcluirPlano = (id) => {
-    if (window.confirm('Excluir este plano?')) {
+  const handleExcluirPlano = async (id) => {
+    if (!window.confirm('Excluir este plano?')) return;
+    try {
+      const response = await fetch(apiUrl(`/api/planos/${id}`), { method: 'DELETE' });
+      if (!response.ok) throw new Error(await response.text());
       setPlanos(prev => prev.filter(p => p.id !== id));
+    } catch (deleteError) {
+      console.error('Erro ao excluir plano:', deleteError);
+      setError('Não foi possível excluir o plano');
     }
   };
 
@@ -248,9 +325,17 @@ export default function Financeiro() {
       )}
       {modalPagamento && (
         <PagamentoModal
+          alunos={alunos}
+          planos={planos}
           onClose={() => setModalPagamento(false)}
           onSave={handleSalvarPagamento}
         />
+      )}
+
+      {error && (
+        <div className="rounded-xl p-4 text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#f87171', border: '1px solid rgba(248, 113, 113, 0.4)' }}>
+          {error}
+        </div>
       )}
 
       {/* Cabeçalho */}

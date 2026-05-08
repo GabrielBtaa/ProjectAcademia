@@ -1,4 +1,5 @@
-import { Bell, Menu, Search } from 'lucide-react';
+import { Bell, Menu, Search, LogOut, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Componente Topbar
@@ -10,6 +11,8 @@ import { Bell, Menu, Search } from 'lucide-react';
  * - notificacoes: número de notificações pendentes
  */
 export default function Topbar({ title, onMenuClick, notificacoes = 3 }) {
+  const { user, logout } = useAuth();
+
   return (
     <header
       className="flex items-center justify-between px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 z-30"
@@ -40,7 +43,7 @@ export default function Topbar({ title, onMenuClick, notificacoes = 3 }) {
         </div>
       </div>
 
-      {/* Direita: Busca global + Notificações */}
+      {/* Direita: Busca global + Notificações + Usuário */}
       <div className="flex items-center gap-2 lg:gap-3">
         {/* Campo de busca (visível em telas médias+) */}
         <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(31, 41, 55, 0.8)', border: '1px solid rgba(55, 65, 81, 0.4)' }}>
@@ -71,6 +74,30 @@ export default function Topbar({ title, onMenuClick, notificacoes = 3 }) {
             </span>
           )}
         </button>
+
+        {/* Informações do usuário e logout */}
+        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-600">
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <User size={16} className="text-white" />
+            </div>
+            <div className="hidden lg:block">
+              <p className="text-sm font-medium text-white">{user?.nome}</p>
+              <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="p-2 rounded-lg transition-all duration-200"
+            style={{ color: '#9ca3af', background: 'rgba(31, 41, 55, 0.6)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(55, 65, 81, 0.6)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'rgba(31, 41, 55, 0.6)'; }}
+            aria-label="Sair"
+            title="Sair do sistema"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
       </div>
     </header>
   );

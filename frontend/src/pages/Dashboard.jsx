@@ -18,7 +18,17 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { ALUNOS_MOCK, PAGAMENTOS_MOCK, FREQUENCIA_SEMANAL } from '../data/mockData';
+import { apiUrl } from '../lib/api';
+
+const FREQUENCIA_SEMANAL = [
+  { dia: 'Seg', presencas: 12 },
+  { dia: 'Ter', presencas: 16 },
+  { dia: 'Qua', presencas: 9 },
+  { dia: 'Qui', presencas: 18 },
+  { dia: 'Sex', presencas: 14 },
+  { dia: 'Sáb', presencas: 11 },
+  { dia: 'Dom', presencas: 8 },
+];
 
 // ===== Sub-componente: Card de Métrica =====
 function MetricCard({ title, value, subtitle, icon: Icon, gradient, trend, trendText }) {
@@ -115,43 +125,72 @@ function VencimentoItem({ aluno }) {
 /**
  * Página Dashboard
  * Exibe métricas, gráfico de frequência e lista de vencimentos do dia.
- * Usa useEffect para calcular métricas a partir dos dados mock.
+ * Usa dados reais da API para exibir informações atualizadas.
  */
 export default function Dashboard() {
-  // Estado local das métricas calculadas
   const [metricas, setMetricas] = useState({
     totalAtivos: 0,
     inadimplentes: 0,
     faturamentoMes: 0,
     vencimentosHoje: [],
   });
+  const [pagamentos, setPagamentos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const pagamentosRecentes = pagamentos.slice(0, 5);
 
-  // useEffect: calcula métricas ao montar o componente
-  // Em produção, aqui seria feito um fetch() para a API
   useEffect(() => {
-    const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const mesAtual = new Date().getMonth();
-    const anoAtual = new Date().getFullYear();
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [alunosResponse, pagamentosResponse] = await Promise.all([
+          fetch(apiUrl('/api/alunos')),
+          fetch(apiUrl('/api/pagamentos')),
+        ]);
 
-    const totalAtivos = ALUNOS_MOCK.filter(a => a.status === 'ativo').length;
-    const inadimplentes = ALUNOS_MOCK.filter(a => a.status === 'inadimplente').length;
+        if (!alunosResponse.ok || !pagamentosResponse.ok) {
+          const errorText = !alunosResponse.ok
+            ? await alunosResponse.text()
+            : await pagamentosResponse.text();
+          throw new Error(errorText || 'Erro ao buscar dados da API');
+        }
 
-    // Faturamento: soma dos pagamentos confirmados do mês corrente
-    const faturamentoMes = PAGAMENTOS_MOCK
-      .filter(p => {
-        const dataPgto = new Date(p.data);
-        return (
-          p.status === 'confirmado' &&
-          dataPgto.getMonth() === mesAtual &&
-          dataPgto.getFullYear() === anoAtual
-        );
-      })
-      .reduce((acc, p) => acc + p.valor, 0);
+        const alunos = await alunosResponse.json();
+        const pagamentosData = await pagamentosResponse.json();
 
-    // Vencimentos do dia: alunos cujo vencimento é hoje
-    const vencimentosHoje = ALUNOS_MOCK.filter(a => a.dataVencimento === hoje);
+        const hoje = new Date().toISOString().split('T')[0];
+        const mesAtual = new Date().getMonth();
+        const anoAtual = new Date().getFullYear();
 
-    setMetricas({ totalAtivos, inadimplentes, faturamentoMes, vencimentosHoje });
+        const totalAtivos = alunos.filter(a => a.status === 'ativo').length;
+        const inadimplentes = alunos.filter(a => a.status === 'inadimplente').length;
+        const faturamentoMes = pagamentosData
+          .filter(p => {
+            const dataPgto = new Date(p.data);
+            return (
+              p.status === 'confirmado' &&
+              dataPgto.getMonth() === mesAtual &&
+              dataPgto.getFullYear() === anoAtual
+            );
+          })
+          .reduce((acc, p) => acc + Number(p.valor), 0);
+
+        const vencimentosHoje = alunos.filter(a => a.dataVencimento === hoje);
+
+        setMetricas({ totalAtivos, inadimplentes, faturamentoMes, vencimentosHoje });
+        setPagamentos(pagamentosData);
+      } catch (error) {
+        console.error('Erro ao carregar dados do dashboard:', error);
+        setError(error.message || 'Erro ao carregar dados do dashboard.');
+        setMetricas({ totalAtivos: 0, inadimplentes: 0, faturamentoMes: 0, vencimentosHoje: [] });
+        setPagamentos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   return (
@@ -305,28 +344,38 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {PAGAMENTOS_MOCK.slice(0, 5).map(p => (
-                <tr
-                  key={p.id}
-                  style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.2)' }}
-                  className="transition-colors hover:bg-white/[0.02]"
-                >
-                  <td className="py-3 pr-4 font-medium text-white whitespace-nowrap">{p.aluno}</td>
-                  <td className="py-3 pr-4 whitespace-nowrap" style={{ color: '#9ca3af' }}>{p.plano}</td>
-                  <td className="py-3 pr-4 font-semibold whitespace-nowrap" style={{ color: '#34d399' }}>
-                    R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 pr-4 whitespace-nowrap" style={{ color: '#9ca3af' }}>{p.metodo}</td>
-                  <td className="py-3 pr-4 whitespace-nowrap" style={{ color: '#9ca3af' }}>
-                    {new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="py-3">
-                    <span className={`badge ${p.status === 'confirmado' ? 'badge-active' : 'badge-overdue'}`}>
-                      {p.status}
-                    </span>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-sm text-gray-400">Carregando pagamentos...</td>
                 </tr>
-              ))}
+              ) : pagamentosRecentes.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-sm text-gray-400">Nenhum pagamento encontrado</td>
+                </tr>
+              ) : (
+                pagamentosRecentes.map(p => (
+                  <tr
+                    key={p.id}
+                    style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.2)' }}
+                    className="transition-colors hover:bg-white/[0.02]"
+                  >
+                    <td className="py-3 pr-4 font-medium text-white whitespace-nowrap">{p.aluno?.nome || '—'}</td>
+                    <td className="py-3 pr-4 whitespace-nowrap" style={{ color: '#9ca3af' }}>{p.aluno?.plano?.nome || '—'}</td>
+                    <td className="py-3 pr-4 font-semibold whitespace-nowrap" style={{ color: '#34d399' }}>
+                      R$ {Number(p.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3 pr-4 whitespace-nowrap" style={{ color: '#9ca3af' }}>{p.metodo || 'PIX'}</td>
+                    <td className="py-3 pr-4 whitespace-nowrap" style={{ color: '#9ca3af' }}>
+                      {new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="py-3">
+                      <span className={`badge ${p.status === 'confirmado' ? 'badge-active' : 'badge-overdue'}`}>
+                        {p.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

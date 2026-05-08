@@ -60,9 +60,9 @@ export default function Configuracoes() {
     notifVencimentos: true,
     modoEscuro: true,
     backupAuto: true,
-    nomeAcademia: 'Academia Força Total',
-    cnpj: '12.345.678/0001-99',
-    telefone: '(11) 3456-7890',
+    nomeAcademia: '',
+    cnpj: '',
+    telefone: '',
   });
 
   const toggle = (key) => setConfig(prev => ({ ...prev, [key]: !prev[key] }));

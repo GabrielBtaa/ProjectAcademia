@@ -7,10 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  admin
+  usuario
+}
+
 enum StatusAluno {
   ativo
   inadimplente
   inativo
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
+  password String
+  nome     String
+  role     UserRole @default(usuario)
 }
 
 model Plano {
@@ -20,6 +33,24 @@ model Plano {
   valor     Decimal @db.Decimal(10, 2)
   descricao String?
   alunos    Aluno[]
+}
+
+enum StatusPagamento {
+  pendente
+  confirmado
+  cancelado
+}
+
+model Pagamento {
+  id         Int             @id @default(autoincrement())
+  valor      Decimal         @db.Decimal(10, 2)
+  data       DateTime        @db.Date
+  status     StatusPagamento @default(pendente)
+  metodo     String          @default("PIX")
+  alunoId    Int
+  aluno      Aluno           @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 }
 
 model Aluno {
@@ -34,4 +65,5 @@ model Aluno {
   dataCadastro   DateTime    @default(now())
   planoId        Int
   plano          Plano       @relation(fields: [planoId], references: [id], onDelete: Restrict)
+  pagamentos     Pagamento[]
 }
