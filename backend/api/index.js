@@ -1,9 +1,9 @@
-import "./lib/load-env.js";
+import "../lib/load-env.js";
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { prisma } from "./lib/prisma.js";
+import { prisma } from "../lib/prisma.js";
 
 const app = express();
 
