@@ -108,7 +108,10 @@ export default function Login() {
         <div className="text-center">
           <button
             type="button"
-            onClick={() => window.location.hash = '#register'} // Usar hash para indicar registro
+            onClick={() => {
+              window.history.pushState({}, '', '/register');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
             className="text-sm text-blue-400 hover:text-blue-300"
           >
             Não tem conta? Criar conta

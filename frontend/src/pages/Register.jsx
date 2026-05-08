@@ -153,7 +153,10 @@ export default function Register() {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => window.location.hash = ''} // Limpar hash para voltar ao login
+              onClick={() => {
+                window.history.pushState({}, '', '/');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
               className="text-sm text-blue-400 hover:text-blue-300"
             >
               Já tem conta? Fazer login

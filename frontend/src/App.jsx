@@ -35,18 +35,25 @@ function AppContent() {
 
   // Verificar hash da URL para mostrar registro
   useEffect(() => {
-    const checkHash = () => {
-      if (window.location.hash === '#register') {
+    const checkRoute = () => {
+      const hash = window.location.hash;
+      const path = window.location.pathname;
+
+      if (hash === '#register' || path === '/register') {
         setShowRegister(true);
       } else {
         setShowRegister(false);
       }
     };
 
-    checkHash();
-    window.addEventListener('hashchange', checkHash);
+    checkRoute();
+    window.addEventListener('hashchange', checkRoute);
+    window.addEventListener('popstate', checkRoute);
 
-    return () => window.removeEventListener('hashchange', checkHash);
+    return () => {
+      window.removeEventListener('hashchange', checkRoute);
+      window.removeEventListener('popstate', checkRoute);
+    };
   }, []);
 
   // Verificar se precisa fazer setup (verificar planos)
