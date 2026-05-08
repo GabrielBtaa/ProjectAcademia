@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import Dashboard from './pages/Dashboard';
 import Alunos from './pages/Alunos';
 import Financeiro from './pages/Financeiro';
 import Configuracoes from './pages/Configuracoes';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Setup from './pages/Setup';
 
 const backend = import.meta.env.VITE_BACKEND;
 
@@ -17,18 +21,77 @@ const PAGES = {
 };
 
 /**
- * Componente raiz App
- * Gerencia o estado global da navegação (página ativa e sidebar mobile).
- * O layout é dividido em: Sidebar (esquerda) + Área principal (direita).
- *
- * Estado:
- * - activePage: string com o ID da página ativa
- * - sidebarOpen: boolean para controle da sidebar em mobile
+ * Componente interno que usa o contexto de autenticação
  */
-export default function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [needsSetup, setNeedsSetup] = useState(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+
   // Estado da navegação e sidebar mobile
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Verificar hash da URL para mostrar registro
+  useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash === '#register') {
+        setShowRegister(true);
+      } else {
+        setShowRegister(false);
+      }
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
+  // Verificar se precisa fazer setup (verificar planos)
+  useEffect(() => {
+    if (!user) return;
+    
+    const checkSetup = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API || '/api'}/planos`);
+        if (!res.ok) throw new Error('Erro ao verificar planos');
+        const planos = await res.json();
+        setNeedsSetup(planos.length === 0);
+      } catch (err) {
+        console.error('Erro ao verificar setup:', err);
+        setNeedsSetup(false);
+      }
+    };
+
+    checkSetup();
+  }, [user]);
+
+  // Mostrar loading enquanto verifica autenticação
+  if (loading || needsSetup === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar login ou registro se não estiver autenticado
+  if (!user) {
+    return showRegister ? <Register /> : <Login />;
+  }
+
+  // Mostrar setup se não houver planos
+  if (needsSetup) {
+    return <Setup onComplete={() => {
+      setNeedsSetup(false);
+      setActivePage('dashboard');
+    }} />;
+  }
 
   // Obtém as informações da página ativa
   const currentPage = PAGES[activePage] || PAGES.dashboard;
@@ -64,5 +127,17 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+/**
+ * Componente raiz App
+ * Envolve tudo com o AuthProvider
+ */
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
