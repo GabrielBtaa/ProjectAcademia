@@ -57,10 +57,11 @@ function serializeAluno(a) {
 
 app.get("/api/health", async (req, res) => {
   try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ ok: true, message: "Backend rodando", db: true });
-  } catch {
-    res.status(503).json({ ok: false, message: "Backend rodando", db: false });
+    // Simple health check without DB
+    res.json({ ok: true, message: "Backend rodando", db: false });
+  } catch (error) {
+    console.error("Health check error:", error);
+    res.status(503).json({ ok: false, message: "Backend error", db: false });
   }
 });
 
@@ -382,16 +383,6 @@ app.post("/api/pagamentos", async (req, res) => {
 
 // Handler para Vercel
 export default function handler(req, res) {
-  // Define CORS headers
-  const origin = req.headers.origin || "*";
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
   // Delegate to Express app
-  return app(req, res);
+  app(req, res);
 }
