@@ -1,9 +1,14 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../backend/lib/prisma.js';
 import '../backend/lib/load-env.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -17,6 +22,10 @@ const corsOrigins = process.env.FRONTEND_ORIGIN
 
 app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
+
+// Serve static files from public directory (for Vercel)
+const publicPath = path.join(__dirname, '..', 'public');
+app.use(express.static(publicPath));
 
 // Utility functions
 function toDateOnly(d) {
@@ -357,6 +366,11 @@ app.post('/api/pagamentos', async (req, res) => {
     console.error(e);
     res.status(500).json({ error: 'Erro ao criar pagamento' });
   }
+});
+
+// SPA fallback - serve index.html for non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Vercel serverless handler
