@@ -58,8 +58,11 @@ function AppContent() {
 
   // Verificar se precisa fazer setup (verificar planos)
   useEffect(() => {
-    if (!user) return;
-    
+    if (!user) {
+      setNeedsSetup(false);
+      return;
+    }
+
     const checkSetup = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API || '/api'}/planos`);
