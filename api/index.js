@@ -1,13 +1,10 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../backend/lib/prisma.js';
 import '../backend/lib/load-env.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
@@ -20,10 +17,6 @@ const corsOrigins = process.env.FRONTEND_ORIGIN
 
 app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
-
-// Serve static files from frontend/dist
-const distPath = path.join(__dirname, '..', 'frontend', 'dist');
-app.use(express.static(distPath));
 
 // Utility functions
 function toDateOnly(d) {
@@ -364,11 +357,6 @@ app.post('/api/pagamentos', async (req, res) => {
     console.error(e);
     res.status(500).json({ error: 'Erro ao criar pagamento' });
   }
-});
-
-// SPA fallback - serve index.html for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Vercel serverless handler
