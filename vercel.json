@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "public": "public",
   "builds": [
     {
       "src": "api/index.js",
@@ -12,19 +13,10 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/dist/assets/$1"
-    },
-    {
-      "src": "/(.*\\.(?:js|css|map|ico|svg|json))",
-      "dest": "/frontend/dist/$1"
-    },
-    {
-      "src": "/.*",
-      "dest": "/frontend/dist/index.html"
+      "src": "/(.*)",
+      "dest": "/public/$1"
     }
   ],
   "installCommand": "cd backend && npm install && npx prisma generate",
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "publicPath": "frontend/dist"
+  "buildCommand": "cd frontend && npm install && npm run build && cp -r frontend/dist/* public/"
 }
