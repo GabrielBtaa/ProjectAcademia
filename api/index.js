@@ -5,7 +5,6 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../backend/lib/prisma.js';
-import '../backend/lib/load-env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,10 +67,12 @@ function serializeAluno(a) {
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
-    res.json({ ok: true, message: 'Backend rodando', db: false });
+    // Test database connection
+    await prisma.$connect();
+    res.json({ ok: true, message: 'Backend rodando', db: true });
   } catch (error) {
     console.error('Health check error:', error);
-    res.status(503).json({ ok: false, message: 'Backend error', db: false });
+    res.status(503).json({ ok: false, message: 'Database connection failed', db: false, error: error.message });
   }
 });
 
