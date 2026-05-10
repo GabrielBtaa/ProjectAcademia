@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "public",
+      "use": "@vercel/static"
+    },
+    {
       "src": "api/index.js",
       "use": "@vercel/node"
     }
@@ -12,16 +16,8 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/public/assets/$1"
-    },
-    {
-      "src": "/(.*\\..*)",
+      "src": "/(.*)",
       "dest": "/public/$1"
-    },
-    {
-      "src": "/.*",
-      "dest": "/public/index.html"
     }
   ],
   "installCommand": "npm run build && cd backend && npx prisma generate",
