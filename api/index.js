@@ -1,10 +1,6 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import cors from 'cors';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
 
 const app = express();
 
@@ -15,7 +11,7 @@ app.use(express.json());
 const publicPath = path.join(__dirname, '..', 'public');
 app.use(express.static(publicPath));
 
-// Simple health check without database
+// Simple health check
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'Backend rodando', db: false });
 });
@@ -26,7 +22,7 @@ app.get('*', (req, res) => {
 });
 
 // Vercel serverless handler
-export default function handler(req, res) {
+module.exports = (req, res) => {
   app(req, res);
-}
+};
 
