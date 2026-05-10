@@ -8,3 +8,4 @@ backend/node_modules
 frontend/node_modules
 *.swp
 *.swo
+!frontend/dist
