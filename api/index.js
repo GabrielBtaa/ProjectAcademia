@@ -365,7 +365,11 @@ app.post('/api/pagamentos', async (req, res) => {
 });
 
 // SPA fallback - serve index.html for non-API routes
-app.get('*', (req, res) => {
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+
   const fs = require('fs');
   const indexPath = path.join(publicPath, 'index.html');
   if (fs.existsSync(indexPath)) {
