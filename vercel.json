@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "public": "frontend/dist",
   "builds": [
     {
       "src": "backend/api/index.js",
@@ -12,8 +13,20 @@
       "dest": "/backend/api/index.js"
     },
     {
-      "src": "/(.*)",
+      "src": "^/assets/(.*)",
+      "dest": "/frontend/dist/assets/$1"
+    },
+    {
+      "src": "^/favicon\\.(ico|svg)$",
       "dest": "/frontend/dist/$1"
+    },
+    {
+      "src": "^/(.*)\\.(js|css|map|txt|json)$",
+      "dest": "/frontend/dist/$1.$2"
+    },
+    {
+      "src": "^/(?!api)(.*)",
+      "dest": "/frontend/dist/index.html"
     }
   ],
   "installCommand": "cd backend && npm install && npx prisma generate",
