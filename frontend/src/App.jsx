@@ -25,7 +25,7 @@ const PAGES = {
  */
 function AppContent() {
   const { user, loading } = useAuth();
-  const [needsSetup, setNeedsSetup] = useState(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
