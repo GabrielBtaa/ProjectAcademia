@@ -38,15 +38,16 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email: cleanEmail }
     });
 
     if (!user) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = bcrypt.compareSync(String(password), user.password);
     if (!validPassword) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
@@ -68,7 +69,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no login:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    return res.status(500).json({ error: `Falha no login: ${error.message || error}` });
   }
 });
 
@@ -80,21 +81,22 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Email, senha e nome são obrigatórios' });
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email: cleanEmail }
     });
 
     if (existingUser) {
       return res.status(400).json({ error: 'Email já cadastrado' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = bcrypt.hashSync(String(password), 10);
     const user = await prisma.user.create({
       data: {
-        email,
+        email: cleanEmail,
         password: hashedPassword,
-        nome,
-        role: 'USER'
+        nome: String(nome).trim(),
+        role: 'usuario'
       }
     });
 
@@ -115,7 +117,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no registro:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    return res.status(500).json({ error: `Falha no cadastro: ${error.message || error}` });
   }
 });
 
