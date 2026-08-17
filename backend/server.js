@@ -97,6 +97,28 @@ function serializePlano(p) {
   };
 }
 
+function serializePagamento(p) {
+  return {
+    id: p.id,
+    valor: Number(p.valor),
+    data: toDateOnly(p.data),
+    status: p.status,
+    metodo: p.metodo,
+    alunoId: p.alunoId,
+    aluno: p.aluno
+      ? {
+          id: p.aluno.id,
+          nome: p.aluno.nome,
+          status: p.aluno.status,
+          dataVencimento: toDateOnly(p.aluno.dataVencimento),
+          plano: p.aluno.plano ? { id: p.aluno.plano.id, nome: p.aluno.plano.nome } : undefined,
+        }
+      : undefined,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  };
+}
+
 function serializeAluno(a) {
   return {
     id: a.id,
@@ -240,6 +262,37 @@ app.get("/api/auth/verify", async (req, res) => {
     });
   } catch (error) {
     return res.status(401).json({ error: "Token inválido" });
+  }
+});
+
+app.put("/api/auth/senha", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Token não fornecido" });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { senhaAtual, novaSenha } = req.body || {};
+    if (!senhaAtual || !novaSenha) {
+      return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
+    }
+    if (String(novaSenha).length < 6) {
+      return res.status(400).json({ error: "A nova senha deve ter ao menos 6 caracteres" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+    const validPassword = bcrypt.compareSync(String(senhaAtual), user.password);
+    if (!validPassword) return res.status(401).json({ error: "Senha atual incorreta" });
+
+    const hashedPassword = bcrypt.hashSync(String(novaSenha), 10);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("Erro ao alterar senha:", error);
+    return res.status(500).json({ error: "Falha ao alterar senha" });
   }
 });
 
@@ -411,10 +464,7 @@ app.get("/api/pagamentos", async (req, res) => {
       },
       orderBy: { createdAt: "desc" },
     });
-    res.json(pagamentos.map((p) => ({
-      ...p,
-      valor: Number(p.valor),
-    })));
+    res.json(pagamentos.map(serializePagamento));
   } catch (e) {
     console.error(e);
     if (e.code === "P2021") {
@@ -424,30 +474,134 @@ app.get("/api/pagamentos", async (req, res) => {
   }
 });
 
+function addMeses(date, meses) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + Number(meses));
+  return d;
+}
+
+// Registrar pagamento: cria o registro e, quando confirmado, estende a
+// dataVencimento do aluno de acordo com a duração do plano e reativa o status.
 app.post("/api/pagamentos", async (req, res) => {
-  const { valor, data, status, metodo, alunoId } = req.body;
+  const { valor, data, status, metodo, alunoId } = req.body || {};
   if (!valor || !data || !alunoId) {
     return res.status(400).json({ error: "Valor, data e alunoId são obrigatórios" });
   }
+  const statusPagamento = status || "confirmado";
+
   try {
-    const created = await prisma.pagamento.create({
-      data: {
-        valor: Number(valor),
-        data: new Date(String(data) + "T12:00:00"),
-        status: status || "pendente",
-        metodo: metodo || "PIX",
-        alunoId: Number(alunoId),
-      },
-      include: {
-        aluno: {
-          include: { plano: true },
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.pagamento.create({
+        data: {
+          valor: Number(valor),
+          data: new Date(String(data) + "T12:00:00"),
+          status: statusPagamento,
+          metodo: metodo || "PIX",
+          alunoId: Number(alunoId),
         },
-      },
+        include: { aluno: { include: { plano: true } } },
+      });
+
+      if (statusPagamento === "confirmado") {
+        const aluno = created.aluno;
+        const plano = aluno.plano;
+        const hoje = new Date(new Date().toISOString().slice(0, 10) + "T12:00:00");
+        const vencimentoAtual = new Date(aluno.dataVencimento);
+        const baseData = vencimentoAtual > hoje ? vencimentoAtual : hoje;
+        const novaDataVencimento = addMeses(baseData, plano.duracao);
+
+        await tx.aluno.update({
+          where: { id: aluno.id },
+          data: { status: "ativo", dataVencimento: novaDataVencimento },
+        });
+
+        created.aluno.status = "ativo";
+        created.aluno.dataVencimento = novaDataVencimento;
+      }
+
+      return created;
     });
-    res.status(201).json({ ...created, valor: Number(created.valor) });
+
+    res.status(201).json(serializePagamento(result));
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Erro ao criar pagamento" });
+  }
+});
+
+// Excluir/estornar um pagamento
+app.delete("/api/pagamentos/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "ID inválido" });
+  try {
+    await prisma.pagamento.delete({ where: { id } });
+    res.status(204).end();
+  } catch (e) {
+    if (e.code === "P2025") {
+      return res.status(404).json({ error: "Pagamento não encontrado" });
+    }
+    console.error(e);
+    res.status(500).json({ error: "Erro ao excluir pagamento" });
+  }
+});
+
+// ===== Notificações =====
+app.get("/api/notificacoes", async (req, res) => {
+  try {
+    const hoje = new Date(new Date().toISOString().slice(0, 10) + "T12:00:00");
+    const em5dias = new Date(hoje);
+    em5dias.setDate(em5dias.getDate() + 5);
+
+    const [alunos, pagamentosPendentes] = await Promise.all([
+      prisma.aluno.findMany({ include: { plano: true } }),
+      prisma.pagamento.findMany({
+        where: { status: "pendente" },
+        include: { aluno: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const notificacoes = [];
+
+    for (const aluno of alunos) {
+      const vencimento = new Date(aluno.dataVencimento);
+      if (vencimento < hoje) {
+        notificacoes.push({
+          id: `vencido-${aluno.id}`,
+          tipo: "vencido",
+          alunoId: aluno.id,
+          titulo: `${aluno.nome} está com a mensalidade vencida`,
+          data: toDateOnly(aluno.dataVencimento),
+        });
+      } else if (vencimento <= em5dias) {
+        notificacoes.push({
+          id: `vencendo-${aluno.id}`,
+          tipo: "vencendo",
+          alunoId: aluno.id,
+          titulo: `${aluno.nome} vence em breve (${toDateOnly(aluno.dataVencimento)})`,
+          data: toDateOnly(aluno.dataVencimento),
+        });
+      }
+    }
+
+    for (const p of pagamentosPendentes) {
+      notificacoes.push({
+        id: `pendente-${p.id}`,
+        tipo: "pendente",
+        alunoId: p.alunoId,
+        pagamentoId: p.id,
+        titulo: `Pagamento pendente de ${p.aluno?.nome || "aluno"}`,
+        data: toDateOnly(p.data),
+      });
+    }
+
+    const ordem = { vencido: 0, pendente: 1, vencendo: 2 };
+    notificacoes.sort((a, b) => ordem[a.tipo] - ordem[b.tipo]);
+
+    res.json({ total: notificacoes.length, notificacoes });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Erro ao buscar notificações" });
   }
 });
 

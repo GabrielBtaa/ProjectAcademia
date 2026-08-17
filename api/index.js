@@ -18,6 +18,73 @@ app.use(express.json());
 const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 
+// ===== Helpers =====
+function avatarFromNome(nome) {
+  const parts = String(nome).trim().split(/\s+/).filter(Boolean);
+  const first = parts[0] || '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first[0] + last).toUpperCase();
+}
+
+function toDateOnly(date) {
+  return date instanceof Date ? date.toISOString().slice(0, 10) : date;
+}
+
+function serializePlano(p) {
+  return {
+    id: p.id,
+    nome: p.nome,
+    duracao: p.duracao,
+    valor: Number(p.valor),
+    descricao: p.descricao,
+  };
+}
+
+function serializeAluno(a) {
+  return {
+    id: a.id,
+    nome: a.nome,
+    cpf: a.cpf,
+    whatsapp: a.whatsapp,
+    dataNascimento: toDateOnly(a.dataNascimento),
+    dataVencimento: toDateOnly(a.dataVencimento),
+    dataCadastro: toDateOnly(a.dataCadastro),
+    status: a.status,
+    planoId: a.planoId,
+    plano: a.plano?.nome,
+    avatar: a.avatar || avatarFromNome(a.nome),
+  };
+}
+
+function serializePagamento(p) {
+  return {
+    id: p.id,
+    valor: Number(p.valor),
+    data: toDateOnly(p.data),
+    status: p.status,
+    metodo: p.metodo,
+    alunoId: p.alunoId,
+    aluno: p.aluno
+      ? {
+          id: p.aluno.id,
+          nome: p.aluno.nome,
+          status: p.aluno.status,
+          dataVencimento: toDateOnly(p.aluno.dataVencimento),
+          plano: p.aluno.plano ? { id: p.aluno.plano.id, nome: p.aluno.plano.nome } : undefined,
+        }
+      : undefined,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  };
+}
+
+// Soma `meses` a uma data, preservando meio-dia para evitar problemas de fuso horário
+function addMeses(date, meses) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + Number(meses));
+  return d;
+}
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
@@ -29,7 +96,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Auth routes
+// ===== Auth =====
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -152,43 +219,121 @@ app.get('/api/auth/verify', async (req, res) => {
   }
 });
 
-// Planos
+app.put('/api/auth/senha', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { senhaAtual, novaSenha } = req.body || {};
+    if (!senhaAtual || !novaSenha) {
+      return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+    }
+    if (String(novaSenha).length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter ao menos 6 caracteres' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    const validPassword = bcrypt.compareSync(String(senhaAtual), user.password);
+    if (!validPassword) return res.status(401).json({ error: 'Senha atual incorreta' });
+
+    const hashedPassword = bcrypt.hashSync(String(novaSenha), 10);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    return res.status(500).json({ error: 'Falha ao alterar senha' });
+  }
+});
+
+// ===== Planos =====
 app.get('/api/planos', async (req, res) => {
   try {
     const planos = await prisma.plano.findMany({ orderBy: { id: 'asc' } });
-    res.json(planos.map(p => ({
-      id: p.id,
-      nome: p.nome,
-      duracao: p.duracao,
-      valor: Number(p.valor),
-      descricao: p.descricao,
-    })));
+    res.json(planos.map(serializePlano));
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao listar planos' });
   }
 });
 
-// Alunos
+app.post('/api/planos', async (req, res) => {
+  const { nome, duracao, valor, descricao } = req.body || {};
+  if (!nome || !duracao || !valor) {
+    return res.status(400).json({ error: 'Nome, duração e valor são obrigatórios' });
+  }
+  try {
+    const created = await prisma.plano.create({
+      data: {
+        nome: String(nome),
+        duracao: Number(duracao),
+        valor: Number(valor),
+        descricao: descricao ? String(descricao) : null,
+      },
+    });
+    res.status(201).json(serializePlano(created));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao criar plano' });
+  }
+});
+
+app.put('/api/planos/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const { nome, duracao, valor, descricao } = req.body || {};
+  if (!Number.isFinite(id) || !nome || !duracao || !valor) {
+    return res.status(400).json({ error: 'ID, nome, duração e valor são obrigatórios' });
+  }
+  try {
+    const updated = await prisma.plano.update({
+      where: { id },
+      data: {
+        nome: String(nome),
+        duracao: Number(duracao),
+        valor: Number(valor),
+        descricao: descricao ? String(descricao) : null,
+      },
+    });
+    res.json(serializePlano(updated));
+  } catch (e) {
+    if (e.code === 'P2025') {
+      return res.status(404).json({ error: 'Plano não encontrado' });
+    }
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao atualizar plano' });
+  }
+});
+
+app.delete('/api/planos/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    await prisma.plano.delete({ where: { id } });
+    res.status(204).end();
+  } catch (e) {
+    if (e.code === 'P2025') {
+      return res.status(404).json({ error: 'Plano não encontrado' });
+    }
+    if (e.code === 'P2003') {
+      return res.status(400).json({ error: 'Não é possível excluir: existem alunos vinculados a este plano' });
+    }
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao excluir plano' });
+  }
+});
+
+// ===== Alunos =====
 app.get('/api/alunos', async (req, res) => {
   try {
     const alunos = await prisma.aluno.findMany({
       include: { plano: true },
       orderBy: { id: 'asc' },
     });
-    res.json(alunos.map(a => ({
-      id: a.id,
-      nome: a.nome,
-      cpf: a.cpf,
-      whatsapp: a.whatsapp,
-      dataNascimento: a.dataNascimento.toISOString().slice(0, 10),
-      dataVencimento: a.dataVencimento.toISOString().slice(0, 10),
-      dataCadastro: a.dataCadastro.toISOString().slice(0, 10),
-      status: a.status,
-      planoId: a.planoId,
-      plano: a.plano?.nome,
-      avatar: a.avatar || a.nome.split(' ').map(n => n[0]).join('').toUpperCase(),
-    })));
+    res.json(alunos.map(serializeAluno));
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao listar alunos' });
@@ -225,23 +370,11 @@ app.post('/api/alunos', async (req, res) => {
         dataVencimento: new Date(String(dataVencimento) + 'T12:00:00'),
         planoId: Number(planoId),
         status: status || 'ativo',
-        avatar: String(nome).split(' ').map(n => n[0]).join('').toUpperCase(),
+        avatar: avatarFromNome(String(nome)),
       },
       include: { plano: true },
     });
-    res.status(201).json({
-      id: created.id,
-      nome: created.nome,
-      cpf: created.cpf,
-      whatsapp: created.whatsapp,
-      dataNascimento: created.dataNascimento.toISOString().slice(0, 10),
-      dataVencimento: created.dataVencimento.toISOString().slice(0, 10),
-      dataCadastro: created.dataCadastro.toISOString().slice(0, 10),
-      status: created.status,
-      planoId: created.planoId,
-      plano: created.plano?.nome,
-      avatar: created.avatar,
-    });
+    res.status(201).json(serializeAluno(created));
   } catch (e) {
     if (e.code === 'P2002') {
       return res.status(400).json({ error: 'CPF já cadastrado' });
@@ -285,23 +418,11 @@ app.put('/api/alunos/:id', async (req, res) => {
         dataVencimento: new Date(String(dataVencimento) + 'T12:00:00'),
         planoId: Number(planoId),
         status: status || 'ativo',
-        avatar: String(nome).split(' ').map(n => n[0]).join('').toUpperCase(),
+        avatar: avatarFromNome(String(nome)),
       },
       include: { plano: true },
     });
-    res.json({
-      id: updated.id,
-      nome: updated.nome,
-      cpf: updated.cpf,
-      whatsapp: updated.whatsapp,
-      dataNascimento: updated.dataNascimento.toISOString().slice(0, 10),
-      dataVencimento: updated.dataVencimento.toISOString().slice(0, 10),
-      dataCadastro: updated.dataCadastro.toISOString().slice(0, 10),
-      status: updated.status,
-      planoId: updated.planoId,
-      plano: updated.plano?.nome,
-      avatar: updated.avatar,
-    });
+    res.json(serializeAluno(updated));
   } catch (e) {
     if (e.code === 'P2002') {
       return res.status(400).json({ error: 'CPF já cadastrado' });
@@ -330,39 +451,148 @@ app.delete('/api/alunos/:id', async (req, res) => {
   }
 });
 
-// Pagamentos
+// ===== Pagamentos =====
 app.get('/api/pagamentos', async (req, res) => {
   try {
     const pagamentos = await prisma.pagamento.findMany({
-      include: { aluno: true },
+      include: { aluno: { include: { plano: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(pagamentos);
+    res.json(pagamentos.map(serializePagamento));
   } catch (e) {
     console.error(e);
+    if (e.code === 'P2021') {
+      return res.json([]);
+    }
     res.status(500).json({ error: 'Erro ao buscar pagamentos' });
   }
 });
 
+// Registrar pagamento: cria o registro e, quando confirmado, estende a
+// dataVencimento do aluno de acordo com a duração do plano e reativa o status.
 app.post('/api/pagamentos', async (req, res) => {
-  const { valor, data, status, alunoId } = req.body;
+  const { valor, data, status, metodo, alunoId } = req.body || {};
   if (!valor || !data || !alunoId) {
     return res.status(400).json({ error: 'Valor, data e alunoId são obrigatórios' });
   }
+  const statusPagamento = status || 'confirmado';
+
   try {
-    const created = await prisma.pagamento.create({
-      data: {
-        valor: Number(valor),
-        data: new Date(String(data) + 'T12:00:00'),
-        status: status || 'pendente',
-        alunoId: Number(alunoId),
-      },
-      include: { aluno: true },
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.pagamento.create({
+        data: {
+          valor: Number(valor),
+          data: new Date(String(data) + 'T12:00:00'),
+          status: statusPagamento,
+          metodo: metodo || 'PIX',
+          alunoId: Number(alunoId),
+        },
+        include: { aluno: { include: { plano: true } } },
+      });
+
+      if (statusPagamento === 'confirmado' && created.aluno) {
+        const aluno = created.aluno;
+        const plano = aluno.plano;
+        const duracaoMeses = (plano && plano.duracao) ? Number(plano.duracao) : 1;
+        const hoje = new Date(new Date().toISOString().slice(0, 10) + 'T12:00:00');
+        const vencimentoAtual = aluno.dataVencimento ? new Date(aluno.dataVencimento) : hoje;
+        const baseData = vencimentoAtual > hoje ? vencimentoAtual : hoje;
+        const novaDataVencimento = addMeses(baseData, duracaoMeses);
+
+        await tx.aluno.update({
+          where: { id: aluno.id },
+          data: { status: 'ativo', dataVencimento: novaDataVencimento },
+        });
+
+        created.aluno.status = 'ativo';
+        created.aluno.dataVencimento = novaDataVencimento;
+      }
+
+      return created;
     });
-    res.status(201).json(created);
+
+    res.status(201).json(serializePagamento(result));
+  } catch (e) {
+    console.error('Erro ao criar pagamento:', e);
+    res.status(500).json({ error: `Erro ao criar pagamento: ${e.message || e}` });
+  }
+});
+
+// Excluir/estornar um pagamento
+app.delete('/api/pagamentos/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    await prisma.pagamento.delete({ where: { id } });
+    res.status(204).end();
+  } catch (e) {
+    if (e.code === 'P2025') {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao excluir pagamento' });
+  }
+});
+
+// ===== Notificações =====
+// Calcula em tempo real: alunos vencidos, vencendo nos próximos 5 dias, e pagamentos pendentes.
+app.get('/api/notificacoes', async (req, res) => {
+  try {
+    const hoje = new Date(new Date().toISOString().slice(0, 10) + 'T12:00:00');
+    const em5dias = new Date(hoje);
+    em5dias.setDate(em5dias.getDate() + 5);
+
+    const [alunos, pagamentosPendentes] = await Promise.all([
+      prisma.aluno.findMany({ include: { plano: true } }),
+      prisma.pagamento.findMany({
+        where: { status: 'pendente' },
+        include: { aluno: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const notificacoes = [];
+
+    for (const aluno of alunos) {
+      const vencimento = new Date(aluno.dataVencimento);
+      if (vencimento < hoje) {
+        notificacoes.push({
+          id: `vencido-${aluno.id}`,
+          tipo: 'vencido',
+          alunoId: aluno.id,
+          titulo: `${aluno.nome} está com a mensalidade vencida`,
+          data: toDateOnly(aluno.dataVencimento),
+        });
+      } else if (vencimento <= em5dias) {
+        notificacoes.push({
+          id: `vencendo-${aluno.id}`,
+          tipo: 'vencendo',
+          alunoId: aluno.id,
+          titulo: `${aluno.nome} vence em breve (${toDateOnly(aluno.dataVencimento)})`,
+          data: toDateOnly(aluno.dataVencimento),
+        });
+      }
+    }
+
+    for (const p of pagamentosPendentes) {
+      notificacoes.push({
+        id: `pendente-${p.id}`,
+        tipo: 'pendente',
+        alunoId: p.alunoId,
+        pagamentoId: p.id,
+        titulo: `Pagamento pendente de ${p.aluno?.nome || 'aluno'}`,
+        data: toDateOnly(p.data),
+      });
+    }
+
+    // Mais urgentes primeiro: vencidos > pendentes > vencendo
+    const ordem = { vencido: 0, pendente: 1, vencendo: 2 };
+    notificacoes.sort((a, b) => ordem[a.tipo] - ordem[b.tipo]);
+
+    res.json({ total: notificacoes.length, notificacoes });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Erro ao criar pagamento' });
+    res.status(500).json({ error: 'Erro ao buscar notificações' });
   }
 });
 
@@ -384,4 +614,3 @@ app.use((req, res) => {
 
 // Vercel serverless handler
 module.exports = app;
-

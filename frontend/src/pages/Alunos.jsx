@@ -72,14 +72,14 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
       <div
         className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up"
-        style={{ background: '#0d1528', border: '1px solid rgba(55, 65, 81, 0.5)' }}
+        style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-3)' }}
       >
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.3)' }}>
-          <h3 className="font-bold text-white text-base">
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-1)' }}>
+          <h3 className="font-bold text-heading text-base">
             {aluno ? 'Editar Aluno' : 'Novo Aluno'}
           </h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1 rounded-lg transition-colors">
+          <button onClick={onClose} className="text-gray-500 hover:text-heading p-1 rounded-lg transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -88,7 +88,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
           {/* Nome */}
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Nome Completo *</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Nome Completo *</label>
             <input
               className="input-field"
               type="text"
@@ -102,7 +102,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
           {/* CPF + WhatsApp */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>CPF *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>CPF *</label>
               <input
                 className="input-field"
                 type="text"
@@ -114,7 +114,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
               {errors.cpf && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.cpf}</p>}
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>WhatsApp *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>WhatsApp *</label>
               <input
                 className="input-field"
                 type="text"
@@ -128,7 +128,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
 
           {/* Data de Nascimento */}
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Data de Nascimento *</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Data de Nascimento *</label>
             <input
               className="input-field"
               type="date"
@@ -142,7 +142,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
           {/* Plano + Data de Vencimento */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Plano *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Plano *</label>
               <select
                 className="input-field"
                 value={form.planoId}
@@ -150,14 +150,14 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
                 style={{ colorScheme: 'dark' }}
               >
                 {planos.map(p => (
-                  <option key={p.id} value={p.id} style={{ background: '#0d1528' }}>
+                  <option key={p.id} value={p.id} style={{ background: 'var(--surface-modal)' }}>
                     {p.nome} – R$ {p.valor.toFixed(2)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Vencimento *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Vencimento *</label>
               <input
                 className="input-field"
                 type="date"
@@ -171,7 +171,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
 
           {/* Status */}
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Status</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Status</label>
             <div className="flex gap-2">
               {['ativo', 'inativo', 'inadimplente'].map(s => (
                 <button
@@ -185,8 +185,8 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
                         ? { background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)' }
                         : s === 'inadimplente'
                         ? { background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)' }
-                        : { background: 'rgba(107, 114, 128, 0.2)', color: '#9ca3af', border: '1px solid rgba(107, 114, 128, 0.4)' }
-                      : { background: 'rgba(31, 41, 55, 0.5)', color: '#6b7280', border: '1px solid rgba(55, 65, 81, 0.3)' }
+                        : { background: 'rgba(107, 114, 128, 0.2)', color: 'var(--text-secondary)', border: '1px solid rgba(107, 114, 128, 0.4)' }
+                      : { background: 'var(--surface-alt-2)', color: 'var(--text-muted)', border: '1px solid var(--border-1)' }
                   }
                 >
                   {s}
@@ -223,7 +223,7 @@ function AlunoCard({ aluno, onEdit, onDelete }) {
   return (
     <div
       className="rounded-xl p-4 space-y-3"
-      style={{ background: 'rgba(22, 27, 39, 0.8)', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+      style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -234,8 +234,8 @@ function AlunoCard({ aluno, onEdit, onDelete }) {
             {aluno.avatar}
           </div>
           <div>
-            <p className="font-semibold text-white text-sm">{aluno.nome}</p>
-            <p className="text-xs" style={{ color: '#6b7280' }}>{aluno.cpf}</p>
+            <p className="font-semibold text-heading text-sm">{aluno.nome}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{aluno.cpf}</p>
           </div>
         </div>
         <span className={`badge badge-${aluno.status === 'ativo' ? 'active' : aluno.status === 'inadimplente' ? 'overdue' : 'inactive'}`}>
@@ -243,20 +243,20 @@ function AlunoCard({ aluno, onEdit, onDelete }) {
         </span>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="flex items-center gap-1.5" style={{ color: '#9ca3af' }}>
+        <div className="flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
           <Phone size={12} />
           {aluno.whatsapp}
         </div>
-        <div className="flex items-center gap-1.5" style={{ color: '#9ca3af' }}>
+        <div className="flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
           <CakeSlice size={12} />
           {new Date(aluno.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR')}
         </div>
       </div>
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-xs" style={{ color: '#6b7280' }}>Plano: </span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Plano: </span>
           <span className="text-xs font-medium" style={{ color: '#60a5fa' }}>{aluno.plano}</span>
-          <span className="text-xs ml-2" style={{ color: dias < 5 ? '#f87171' : '#6b7280' }}>
+          <span className="text-xs ml-2" style={{ color: dias < 5 ? '#f87171' : 'var(--text-muted)' }}>
             {dias > 0 ? `(vence em ${dias}d)` : `(vencido há ${Math.abs(dias)}d)`}
           </span>
         </div>
@@ -317,14 +317,26 @@ export default function Alunos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [alunoEditando, setAlunoEditando] = useState(null);
 
-  // useMemo: filtra e busca sem recálculo desnecessário
+  // useMemo: calcula status real por dataVencimento, filtra e busca
   const alunosFiltrados = useMemo(() => {
-    return alunos.filter(aluno => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    return alunos.map(a => {
+      let statusCalculado = a.status || 'ativo';
+      if (statusCalculado !== 'inativo' && a.dataVencimento) {
+        const venc = new Date(a.dataVencimento + 'T12:00:00');
+        if (venc < hoje) {
+          statusCalculado = 'inadimplente';
+        }
+      }
+      return { ...a, statusExibicao: statusCalculado };
+    }).filter(aluno => {
       const matchBusca =
         aluno.nome.toLowerCase().includes(busca.toLowerCase()) ||
         aluno.cpf.includes(busca) ||
         aluno.whatsapp.includes(busca);
-      const matchStatus = filtroStatus === 'todos' || aluno.status === filtroStatus;
+      const matchStatus = filtroStatus === 'todos' || aluno.statusExibicao === filtroStatus;
       return matchBusca && matchStatus;
     });
   }, [alunos, busca, filtroStatus]);
@@ -420,8 +432,8 @@ export default function Alunos() {
       {/* ===== Cabeçalho da listagem ===== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-white">Gestão de Alunos</h3>
-          <p className="text-sm" style={{ color: '#6b7280' }}>
+          <h3 className="text-xl font-bold text-heading">Gestão de Alunos</h3>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {carregando
               ? 'Carregando…'
               : `${alunosFiltrados.length} aluno${alunosFiltrados.length !== 1 ? 's' : ''} encontrado${alunosFiltrados.length !== 1 ? 's' : ''}`}
@@ -450,18 +462,18 @@ export default function Alunos() {
         {/* Busca por nome/CPF/WhatsApp */}
         <div
           className="flex items-center gap-2 px-3 py-2.5 rounded-lg flex-1"
-          style={{ background: 'rgba(22, 27, 39, 0.8)', border: '1px solid rgba(55, 65, 81, 0.5)' }}
+          style={{ background: 'var(--surface-card)', border: '1px solid var(--border-3)' }}
         >
-          <Search size={16} style={{ color: '#6b7280', flexShrink: 0 }} />
+          <Search size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Buscar por nome, CPF ou WhatsApp..."
             value={busca}
             onChange={e => handleBusca(e.target.value)}
-            className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600"
+            className="bg-transparent text-sm outline-none flex-1 text-heading placeholder-gray-600"
           />
           {busca && (
-            <button onClick={() => handleBusca('')} className="text-gray-500 hover:text-white">
+            <button onClick={() => handleBusca('')} className="text-gray-500 hover:text-heading">
               <X size={14} />
             </button>
           )}
@@ -470,7 +482,7 @@ export default function Alunos() {
         {/* Filtros de status */}
         <div
           className="flex gap-1 p-1 rounded-lg"
-          style={{ background: 'rgba(22, 27, 39, 0.8)', border: '1px solid rgba(55, 65, 81, 0.5)' }}
+          style={{ background: 'var(--surface-card)', border: '1px solid var(--border-3)' }}
         >
           {STATUS_OPTIONS.map(opt => (
             <button
@@ -480,7 +492,7 @@ export default function Alunos() {
               style={
                 filtroStatus === opt.value
                   ? { background: '#2563eb', color: 'white' }
-                  : { color: '#6b7280' }
+                  : { color: 'var(--text-muted)' }
               }
             >
               {opt.label}
@@ -492,13 +504,13 @@ export default function Alunos() {
       {/* ===== Tabela (Desktop) ===== */}
       <div
         className="hidden md:block rounded-xl overflow-hidden"
-        style={{ background: 'rgba(22, 27, 39, 0.8)', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+        style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
       >
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ background: 'rgba(15, 20, 40, 0.8)', borderBottom: '1px solid rgba(55, 65, 81, 0.4)' }}>
+            <tr style={{ background: 'var(--surface-card-alt)', borderBottom: '1px solid var(--border-2)' }}>
               {['Aluno', 'Contato', 'Plano', 'Vencimento', 'Status', 'Ações'].map(h => (
-                <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>
+                <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   {h}
                 </th>
               ))}
@@ -510,7 +522,7 @@ export default function Alunos() {
                 <td colSpan={6} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <AlertCircle size={32} style={{ color: '#374151' }} />
-                    <p style={{ color: '#6b7280' }}>Nenhum aluno encontrado</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Nenhum aluno encontrado</p>
                   </div>
                 </td>
               </tr>
@@ -521,7 +533,7 @@ export default function Alunos() {
                   <tr
                     key={aluno.id}
                     className="transition-colors hover:bg-white/[0.02]"
-                    style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.2)' }}
+                    style={{ borderBottom: '1px solid var(--border-1)' }}
                   >
                     {/* Aluno */}
                     <td className="px-5 py-3.5">
@@ -533,15 +545,15 @@ export default function Alunos() {
                           {aluno.avatar}
                         </div>
                         <div>
-                          <p className="font-semibold text-white">{aluno.nome}</p>
-                          <p className="text-xs" style={{ color: '#6b7280' }}>{aluno.cpf}</p>
+                          <p className="font-semibold text-heading">{aluno.nome}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{aluno.cpf}</p>
                         </div>
                       </div>
                     </td>
 
                     {/* Contato */}
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#9ca3af' }}>
+                      <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
                         <Phone size={12} />
                         {aluno.whatsapp}
                       </div>
@@ -556,10 +568,10 @@ export default function Alunos() {
 
                     {/* Vencimento */}
                     <td className="px-5 py-3.5">
-                      <p className="text-xs" style={{ color: diasVenc < 0 ? '#f87171' : diasVenc < 5 ? '#fbbf24' : '#9ca3af' }}>
+                      <p className="text-xs" style={{ color: diasVenc < 0 ? '#f87171' : diasVenc < 5 ? '#fbbf24' : 'var(--text-secondary)' }}>
                         {new Date(aluno.dataVencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
                       </p>
-                      <p className="text-xs" style={{ color: '#6b7280' }}>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         {diasVenc > 0 ? `${diasVenc}d restantes` : `Vencido há ${Math.abs(diasVenc)}d`}
                       </p>
                     </td>
@@ -605,7 +617,7 @@ export default function Alunos() {
         {alunosPagina.length === 0 ? (
           <div className="text-center py-8">
             <AlertCircle size={32} className="mx-auto mb-2" style={{ color: '#374151' }} />
-            <p style={{ color: '#6b7280' }}>Nenhum aluno encontrado</p>
+            <p style={{ color: 'var(--text-muted)' }}>Nenhum aluno encontrado</p>
           </div>
         ) : (
           alunosPagina.map(aluno => (
@@ -617,7 +629,7 @@ export default function Alunos() {
       {/* ===== Paginação ===== */}
       {totalPaginas > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-xs" style={{ color: '#6b7280' }}>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Página {paginaAtual} de {totalPaginas}
           </p>
           <div className="flex items-center gap-2">
@@ -625,7 +637,7 @@ export default function Alunos() {
               onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
               disabled={paginaAtual === 1}
               className="p-2 rounded-lg transition-all disabled:opacity-30"
-              style={{ background: 'rgba(31, 41, 55, 0.6)', color: '#9ca3af', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+              style={{ background: 'var(--surface-alt-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }}
             >
               <ChevronLeft size={16} />
             </button>
@@ -638,7 +650,7 @@ export default function Alunos() {
                 style={
                   p === paginaAtual
                     ? { background: '#2563eb', color: 'white' }
-                    : { background: 'rgba(31, 41, 55, 0.6)', color: '#9ca3af', border: '1px solid rgba(55, 65, 81, 0.4)' }
+                    : { background: 'var(--surface-alt-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }
                 }
               >
                 {p}
@@ -649,7 +661,7 @@ export default function Alunos() {
               onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
               disabled={paginaAtual === totalPaginas}
               className="p-2 rounded-lg transition-all disabled:opacity-30"
-              style={{ background: 'rgba(31, 41, 55, 0.6)', color: '#9ca3af', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+              style={{ background: 'var(--surface-alt-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }}
             >
               <ChevronRight size={16} />
             </button>

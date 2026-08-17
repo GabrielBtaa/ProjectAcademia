@@ -43,6 +43,73 @@
   --color-surface-50: #f9fafb;
 }
 
+/* ===== VARIÁVEIS DE TEMA (Modo Escuro / Modo Claro) ===== */
+/* Modo escuro é o padrão (mantém a aparência original do app) */
+:root,
+html[data-theme='dark'] {
+  --bg-page: #030712;
+  --surface-card: rgba(22, 27, 39, 0.8);
+  --surface-card-alt: rgba(15, 20, 40, 0.7);
+  --surface-modal: #0d1528;
+  --surface-alt-1: rgba(31, 41, 55, 0.4);
+  --surface-alt-2: rgba(31, 41, 55, 0.5);
+  --surface-alt-3: rgba(31, 41, 55, 0.6);
+  --border-1: rgba(55, 65, 81, 0.3);
+  --border-2: rgba(55, 65, 81, 0.4);
+  --border-3: rgba(55, 65, 81, 0.5);
+  --border-4: rgba(55, 65, 81, 0.6);
+  --text-heading: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+}
+
+html[data-theme='light'] {
+  --bg-page: #f3f4f6;
+  --surface-card: rgba(255, 255, 255, 0.92);
+  --surface-card-alt: rgba(243, 244, 246, 0.9);
+  --surface-modal: #ffffff;
+  --surface-alt-1: rgba(229, 231, 235, 0.6);
+  --surface-alt-2: rgba(229, 231, 235, 0.8);
+  --surface-alt-3: rgba(209, 213, 219, 0.8);
+  --border-1: rgba(209, 213, 219, 0.7);
+  --border-2: rgba(209, 213, 219, 0.9);
+  --border-3: rgba(156, 163, 175, 0.6);
+  --border-4: rgba(156, 163, 175, 0.8);
+  --text-heading: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+}
+
+html[data-theme='light'] body {
+  background-color: var(--bg-page);
+  color: var(--text-heading);
+}
+
+/* Componentes globais adaptados ao tema */
+html[data-theme='light'] .input-field {
+  background: var(--surface-card);
+  border-color: var(--border-4);
+  color: var(--text-heading);
+}
+html[data-theme='light'] .input-field::placeholder {
+  color: rgba(75, 85, 99, 0.6);
+}
+html[data-theme='light'] .btn-secondary {
+  background: var(--surface-alt-2);
+  color: var(--text-heading);
+  border-color: var(--border-4);
+}
+html[data-theme='light'] .btn-secondary:hover {
+  background: var(--border-4);
+  color: var(--text-heading);
+}
+html[data-theme='light'] ::-webkit-scrollbar-track {
+  background: var(--bg-page);
+}
+html[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: var(--border-4);
+}
+
 /* ===== RESET E BASE ===== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -54,12 +121,17 @@ html {
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--color-surface-950);
+  background-color: var(--bg-page, var(--color-surface-950));
   color: var(--color-surface-50);
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Texto de destaque/título que se adapta ao tema (branco no escuro, grafite no claro) */
+.text-heading {
+  color: var(--text-heading);
 }
 
 /* ===== SCROLLBAR CUSTOMIZADA ===== */

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import Dashboard from './pages/Dashboard';
@@ -110,7 +111,7 @@ function AppContent() {
   return (
     <div
       className="flex h-screen overflow-hidden"
-      style={{ background: '#030712' }}
+      style={{ background: 'var(--bg-page)' }}
     >
       {/* ===== Sidebar (fixa na esquerda em desktop) ===== */}
       <Sidebar
@@ -126,7 +127,7 @@ function AppContent() {
         <Topbar
           title={currentPage.title}
           onMenuClick={() => setSidebarOpen(true)}
-          notificacoes={2}
+          onNavigate={setActivePage}
         />
 
         {/* Conteúdo da página - rolagem independente */}
@@ -146,8 +147,10 @@ function AppContent() {
  */
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -42,30 +42,30 @@ function PlanoModal({ plano, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full max-w-md rounded-2xl shadow-2xl animate-fade-in-up" style={{ background: '#0d1528', border: '1px solid rgba(55, 65, 81, 0.5)' }}>
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.3)' }}>
-          <h3 className="font-bold text-white text-base">{plano ? 'Editar Plano' : 'Novo Plano'}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1 rounded-lg transition-colors"><X size={18} /></button>
+      <div className="w-full max-w-md rounded-2xl shadow-2xl animate-fade-in-up" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-3)' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-1)' }}>
+          <h3 className="font-bold text-heading text-base">{plano ? 'Editar Plano' : 'Novo Plano'}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-heading p-1 rounded-lg transition-colors"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Nome do Plano *</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Nome do Plano *</label>
             <input className="input-field" placeholder="Ex: Mensal, Trimestral..." value={form.nome} onChange={e => handleChange('nome', e.target.value)} />
             {errors.nome && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.nome}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Duração (meses) *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Duração (meses) *</label>
               <input className="input-field" type="number" min="1" max="24" value={form.duracao} onChange={e => handleChange('duracao', e.target.value)} />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Valor (R$) *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Valor (R$) *</label>
               <input className="input-field" type="number" step="0.01" min="0" placeholder="0,00" value={form.valor} onChange={e => handleChange('valor', e.target.value)} />
               {errors.valor && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.valor}</p>}
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Descrição</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Descrição</label>
             <input className="input-field" placeholder="Descrição do plano..." value={form.descricao} onChange={e => handleChange('descricao', e.target.value)} />
           </div>
           <div className="flex gap-3 pt-1">
@@ -131,19 +131,19 @@ function PagamentoModal({ alunos, planos, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full max-w-md rounded-2xl shadow-2xl animate-fade-in-up" style={{ background: '#0d1528', border: '1px solid rgba(55, 65, 81, 0.5)' }}>
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.3)' }}>
-          <h3 className="font-bold text-white text-base">Registrar Pagamento</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1 rounded-lg"><X size={18} /></button>
+      <div className="w-full max-w-md rounded-2xl shadow-2xl animate-fade-in-up" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-3)' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-1)' }}>
+          <h3 className="font-bold text-heading text-base">Registrar Pagamento</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-heading p-1 rounded-lg"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {/* Seleção de Aluno */}
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Aluno *</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Aluno *</label>
             <select className="input-field" value={form.alunoId} onChange={e => handleChange('alunoId', e.target.value)} style={{ colorScheme: 'dark' }}>
-              <option value="" style={{ background: '#0d1528' }}>Selecione o aluno...</option>
+              <option value="" style={{ background: 'var(--surface-modal)' }}>Selecione o aluno...</option>
               {alunos.map(a => (
-                <option key={a.id} value={a.id} style={{ background: '#0d1528' }}>
+                <option key={a.id} value={a.id} style={{ background: 'var(--surface-modal)' }}>
                   {a.nome} – {a.plano}
                 </option>
               ))}
@@ -154,19 +154,19 @@ function PagamentoModal({ alunos, planos, onClose, onSave }) {
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Valor (R$) *</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Valor (R$) *</label>
               <input className="input-field" type="number" step="0.01" min="0" value={form.valor} onChange={e => handleChange('valor', e.target.value)} placeholder="0,00" />
               {errors.valor && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.valor}</p>}
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9ca3af' }}>Data</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Data</label>
               <input className="input-field" type="date" value={form.data} onChange={e => handleChange('data', e.target.value)} style={{ colorScheme: 'dark' }} />
             </div>
           </div>
 
           {/* Método de Pagamento */}
           <div>
-            <label className="block text-xs font-semibold mb-2" style={{ color: '#9ca3af' }}>Forma de Pagamento *</label>
+            <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Forma de Pagamento *</label>
             <div className="grid grid-cols-3 gap-2">
               {METODOS.map(({ value, label, icon: Icon }) => (
                 <button
@@ -177,7 +177,7 @@ function PagamentoModal({ alunos, planos, onClose, onSave }) {
                   style={
                     form.metodo === value
                       ? { background: 'rgba(37, 99, 235, 0.2)', color: '#60a5fa', border: '2px solid #2563eb' }
-                      : { background: 'rgba(31, 41, 55, 0.5)', color: '#6b7280', border: '2px solid rgba(55, 65, 81, 0.3)' }
+                      : { background: 'var(--surface-alt-2)', color: 'var(--text-muted)', border: '2px solid var(--border-1)' }
                   }
                 >
                   <Icon size={18} />
@@ -210,6 +210,8 @@ export default function Financeiro() {
   const [planoEditando, setPlanoEditando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filtroMetodo, setFiltroMetodo] = useState('todos');
+  const [filtroMesAno, setFiltroMesAno] = useState('todos');
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -254,6 +256,18 @@ export default function Financeiro() {
     [pagamentos]
   );
 
+  // Opções de mês/ano geradas a partir dos pagamentos existentes (mais recentes primeiro)
+  const opcoesMesAno = useMemo(() => {
+    const set = new Set(pagamentos.map(p => p.data?.slice(0, 7)).filter(Boolean));
+    return Array.from(set).sort().reverse();
+  }, [pagamentos]);
+
+  const pagamentosFiltrados = useMemo(() => pagamentos.filter(p => {
+    const matchMetodo = filtroMetodo === 'todos' || p.metodo === filtroMetodo;
+    const matchMesAno = filtroMesAno === 'todos' || p.data?.slice(0, 7) === filtroMesAno;
+    return matchMetodo && matchMesAno;
+  }), [pagamentos, filtroMetodo, filtroMesAno]);
+
   const handleSalvarPlano = async (dados) => {
     try {
       if (planoEditando) {
@@ -294,9 +308,25 @@ export default function Financeiro() {
       if (!response.ok) throw new Error(await response.text());
       const created = await response.json();
       setPagamentos(prev => [created, ...prev]);
+      // Atualiza o aluno localmente (status/vencimento) e recarrega a lista completa
+      // para refletir a mensalidade renovada em todas as telas.
+      if (created.aluno) {
+        setAlunos(prev => prev.map(a => (
+          a.id === created.aluno.id
+            ? { ...a, status: created.aluno.status, dataVencimento: created.aluno.dataVencimento }
+            : a
+        )));
+      }
+      try {
+        const alunosRes = await fetch(apiUrl('/api/alunos'));
+        if (alunosRes.ok) setAlunos(await alunosRes.json());
+      } catch { /* mantém a atualização otimista se a releitura falhar */ }
+
+      // Dispara evento para atualizar as notificações instantaneamente na Topbar
+      window.dispatchEvent(new CustomEvent('gymflow:payment-saved'));
     } catch (saveError) {
       console.error('Erro ao salvar pagamento:', saveError);
-      setError('Não foi possível registrar o pagamento');
+      setError(saveError.message || 'Não foi possível registrar o pagamento');
     } finally {
       setModalPagamento(false);
     }
@@ -341,8 +371,8 @@ export default function Financeiro() {
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-white">Controle Financeiro</h3>
-          <p className="text-sm" style={{ color: '#6b7280' }}>
+          <h3 className="text-xl font-bold text-heading">Controle Financeiro</h3>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             Faturamento total: <span style={{ color: '#34d399', fontWeight: 600 }}>R$ {totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </p>
         </div>
@@ -355,12 +385,12 @@ export default function Financeiro() {
       {/* ===== Seção: Planos ===== */}
       <div
         className="rounded-xl p-5"
-        style={{ background: 'rgba(22, 27, 39, 0.8)', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+        style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <PackagePlus size={18} style={{ color: '#60a5fa' }} />
-            <h4 className="font-semibold text-white text-sm">Planos Disponíveis</h4>
+            <h4 className="font-semibold text-heading text-sm">Planos Disponíveis</h4>
           </div>
           <button
             onClick={() => { setPlanoEditando(null); setModalPlano(true); }}
@@ -376,12 +406,12 @@ export default function Financeiro() {
             <div
               key={plano.id}
               className="card-hover rounded-xl p-4 relative"
-              style={{ background: 'rgba(15, 20, 40, 0.7)', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+              style={{ background: 'var(--surface-card-alt)', border: '1px solid var(--border-2)' }}
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="font-bold text-white text-sm">{plano.nome}</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>
+                  <p className="font-bold text-heading text-sm">{plano.nome}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {plano.duracao} {plano.duracao === 1 ? 'mês' : 'meses'}
                   </p>
                 </div>
@@ -405,7 +435,7 @@ export default function Financeiro() {
               <p className="text-2xl font-bold" style={{ color: '#34d399' }}>
                 R$ {plano.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-xs mt-1" style={{ color: '#6b7280' }}>{plano.descricao}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{plano.descricao}</p>
               {plano.duracao > 1 && (
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: '#34d399' }}>
                   <TrendingUp size={11} />
@@ -420,39 +450,70 @@ export default function Financeiro() {
       {/* ===== Seção: Histórico de Pagamentos ===== */}
       <div
         className="rounded-xl overflow-hidden"
-        style={{ background: 'rgba(22, 27, 39, 0.8)', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+        style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
       >
-        <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.3)' }}>
+        <div className="px-5 py-4 flex flex-wrap items-center gap-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
           <DollarSign size={18} style={{ color: '#34d399' }} />
-          <h4 className="font-semibold text-white text-sm">Histórico de Pagamentos</h4>
+          <h4 className="font-semibold text-heading text-sm">Histórico de Pagamentos</h4>
+
+          <select
+            className="input-field"
+            style={{ width: 'auto', padding: '0.35rem 0.6rem', fontSize: '0.75rem', colorScheme: 'dark' }}
+            value={filtroMetodo}
+            onChange={e => setFiltroMetodo(e.target.value)}
+          >
+            <option value="todos" style={{ background: 'var(--surface-modal)' }}>Todos os métodos</option>
+            <option value="PIX" style={{ background: 'var(--surface-modal)' }}>PIX</option>
+            <option value="Cartão" style={{ background: 'var(--surface-modal)' }}>Cartão</option>
+            <option value="Dinheiro" style={{ background: 'var(--surface-modal)' }}>Dinheiro</option>
+          </select>
+
+          <select
+            className="input-field"
+            style={{ width: 'auto', padding: '0.35rem 0.6rem', fontSize: '0.75rem', colorScheme: 'dark' }}
+            value={filtroMesAno}
+            onChange={e => setFiltroMesAno(e.target.value)}
+          >
+            <option value="todos" style={{ background: 'var(--surface-modal)' }}>Todos os meses</option>
+            {opcoesMesAno.map(mesAno => (
+              <option key={mesAno} value={mesAno} style={{ background: 'var(--surface-modal)' }}>
+                {new Date(mesAno + '-01T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              </option>
+            ))}
+          </select>
+
           <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-            {pagamentos.length} registros
+            {pagamentosFiltrados.length} registros
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: 'rgba(15, 20, 40, 0.8)', borderBottom: '1px solid rgba(55, 65, 81, 0.3)' }}>
+              <tr style={{ background: 'var(--surface-card-alt)', borderBottom: '1px solid var(--border-1)' }}>
                 {['Aluno', 'Plano', 'Valor', 'Método', 'Data', 'Status'].map(h => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>{h}</th>
+                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {pagamentos.map(p => (
+              {pagamentosFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-sm text-gray-400">Nenhum pagamento encontrado para este filtro</td>
+                </tr>
+              ) : pagamentosFiltrados.map(p => (
                 <tr
                   key={p.id}
                   className="transition-colors hover:bg-white/[0.02]"
-                  style={{ borderBottom: '1px solid rgba(55, 65, 81, 0.2)' }}
+                  style={{ borderBottom: '1px solid var(--border-1)' }}
                 >
-                  <td className="px-5 py-3.5 font-medium text-white whitespace-nowrap">{p.aluno}</td>
-                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#9ca3af' }}>{p.plano}</td>
+                  <td className="px-5 py-3.5 font-medium text-heading whitespace-nowrap">{p.aluno?.nome || '—'}</td>
+                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{p.aluno?.plano?.nome || '—'}</td>
                   <td className="px-5 py-3.5 font-semibold whitespace-nowrap" style={{ color: '#34d399' }}>
                     R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#9ca3af' }}>{p.metodo}</td>
-                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#9ca3af' }}>
+                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{p.metodo}</td>
+                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                     {new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR')}
                   </td>
                   <td className="px-5 py-3.5">
