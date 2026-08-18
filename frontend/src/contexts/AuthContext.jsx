@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { apiUrl } from '../lib/api';
 
 // Contexto de autenticação
 const AuthContext = createContext();
@@ -30,7 +31,7 @@ export function AuthProvider({ children }) {
   // Função para fazer login
   const login = async (email, password) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,14 +59,13 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    // Recarregar a página para garantir que o estado seja resetado
     window.location.reload();
   };
 
   // Função para verificar token
   const verifyToken = async (token) => {
     try {
-      const response = await fetch('/api/auth/verify', {
+      const response = await fetch(apiUrl('/api/auth/verify'), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -75,7 +75,6 @@ export function AuthProvider({ children }) {
         const data = await response.json();
         setUser(data.user);
       } else {
-        // Token inválido, remover
         localStorage.removeItem('token');
       }
     } catch (error) {
