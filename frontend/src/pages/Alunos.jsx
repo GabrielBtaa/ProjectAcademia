@@ -397,6 +397,7 @@ export default function Alunos() {
         setAlunos(prev => [...prev, body]);
       }
       setModalAberto(false);
+      window.dispatchEvent(new CustomEvent('gymflow:data-changed'));
     } catch (e) {
       alert(e.message || 'Erro ao salvar aluno');
     }
@@ -412,6 +413,7 @@ export default function Alunos() {
         throw new Error(body.error || res.statusText);
       }
       setAlunos(prev => prev.filter(a => a.id !== id));
+      window.dispatchEvent(new CustomEvent('gymflow:data-changed'));
     } catch (e) {
       alert(e.message || 'Erro ao excluir');
     }

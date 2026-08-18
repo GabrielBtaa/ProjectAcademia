@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Users,
   AlertTriangle,
@@ -79,7 +79,7 @@ function FaturamentoTooltip({ active, payload, label }) {
     return (
       <div
         className="rounded-lg px-3 py-2 text-sm shadow-xl"
-        style={{ background: '#1f2937', border: '1px solid var(--border-4)', color: 'white' }}
+        style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-4)', color: 'var(--text-heading)' }}
       >
         <p className="font-semibold">{label}</p>
         <p style={{ color: '#34d399' }}>
@@ -98,7 +98,7 @@ function PlanoTooltip({ active, payload }) {
     return (
       <div
         className="rounded-lg px-3 py-2 text-sm shadow-xl"
-        style={{ background: '#1f2937', border: '1px solid var(--border-4)', color: 'white' }}
+        style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-4)', color: 'var(--text-heading)' }}
       >
         <p className="font-semibold">{item.name}</p>
         <p style={{ color: item.payload.fill }}>{item.value} aluno(s)</p>
@@ -181,9 +181,8 @@ export default function Dashboard() {
     }));
   }, [alunos]);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
+  const fetchDashboardData = useCallback(async ({ showLoading = false } = {}) => {
+      if (showLoading) setLoading(true);
       setError(null);
       try {
         const [alunosResponse, pagamentosResponse] = await Promise.all([
@@ -245,12 +244,22 @@ export default function Dashboard() {
         setPagamentos([]);
         setAlunos([]);
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
-    };
+    }, []);
 
-    fetchDashboardData();
-  }, []);
+  useEffect(() => {
+    fetchDashboardData({ showLoading: true });
+    const refresh = () => fetchDashboardData();
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener('gymflow:data-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('gymflow:data-changed', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [fetchDashboardData]);
 
   const taxaFrequencia = metricas.totalAlunos > 0 ? Math.round((metricas.totalAtivos / metricas.totalAlunos) * 100) : 0;
 

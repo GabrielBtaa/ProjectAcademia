@@ -147,9 +147,9 @@ export default function Topbar({ title, onMenuClick, onNavigate }) {
         <button
           onClick={toggleTheme}
           className="p-2 rounded-lg transition-all duration-200"
-          style={{ color: '#9ca3af', background: 'rgba(31, 41, 55, 0.6)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(55, 65, 81, 0.6)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'rgba(31, 41, 55, 0.6)'; }}
+          style={{ color: btnColor, background: btnBg }}
+          onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#1d4ed8' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = btnColor; e.currentTarget.style.background = btnBg; }}
           aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
           title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
         >
@@ -161,9 +161,9 @@ export default function Topbar({ title, onMenuClick, onNavigate }) {
           <button
             onClick={handleTogglePainel}
             className="relative p-2 rounded-lg transition-all duration-200"
-            style={{ color: '#9ca3af', background: 'rgba(31, 41, 55, 0.6)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(55, 65, 81, 0.6)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'rgba(31, 41, 55, 0.6)'; }}
+          style={{ color: btnColor, background: btnBg }}
+          onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#1d4ed8' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = btnColor; e.currentTarget.style.background = btnBg; }}
             aria-label="Notificações"
           >
             <Bell size={18} />

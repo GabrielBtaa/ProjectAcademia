@@ -305,7 +305,10 @@ export default function Financeiro() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dados),
       });
-      if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || 'Não foi possível registrar o pagamento.');
+      }
       const created = await response.json();
       setPagamentos(prev => [created, ...prev]);
       // Atualiza o aluno localmente (status/vencimento) e recarrega a lista completa
@@ -324,6 +327,7 @@ export default function Financeiro() {
 
       // Dispara evento para atualizar as notificações instantaneamente na Topbar
       window.dispatchEvent(new CustomEvent('gymflow:payment-saved'));
+      window.dispatchEvent(new CustomEvent('gymflow:data-changed'));
     } catch (saveError) {
       console.error('Erro ao salvar pagamento:', saveError);
       setError(saveError.message || 'Não foi possível registrar o pagamento');

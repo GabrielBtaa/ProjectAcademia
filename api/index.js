@@ -9,6 +9,38 @@ const prisma = new PrismaClient();
 
 const app = express();
 
+// Instalações antigas podem ter sido criadas antes da tabela de pagamentos
+// existir. Mantemos este ajuste idempotente para que o deploy não deixe a
+// área financeira indisponível ao encontrar uma base legada.
+let pagamentoSchemaPromise;
+function ensurePagamentoSchema() {
+  if (!pagamentoSchemaPromise) {
+    pagamentoSchemaPromise = (async () => {
+      await prisma.$executeRawUnsafe(`DO $$ BEGIN
+        CREATE TYPE "StatusPagamento" AS ENUM ('pendente', 'confirmado', 'cancelado');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "Pagamento" (
+        "id" SERIAL PRIMARY KEY,
+        "valor" DECIMAL(10,2) NOT NULL,
+        "data" DATE NOT NULL,
+        "status" "StatusPagamento" NOT NULL DEFAULT 'pendente',
+        "metodo" TEXT NOT NULL DEFAULT 'PIX',
+        "alunoId" INTEGER NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`);
+      await prisma.$executeRawUnsafe('ALTER TABLE "Pagamento" ADD COLUMN IF NOT EXISTS "metodo" TEXT NOT NULL DEFAULT \'PIX\';');
+      await prisma.$executeRawUnsafe('ALTER TABLE "Pagamento" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;');
+      await prisma.$executeRawUnsafe('ALTER TABLE "Pagamento" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Pagamento_alunoId_idx" ON "Pagamento" ("alunoId");');
+    })().catch((error) => {
+      pagamentoSchemaPromise = null;
+      throw error;
+    });
+  }
+  return pagamentoSchemaPromise;
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 app.use(cors());
@@ -457,6 +489,7 @@ app.delete('/api/alunos/:id', async (req, res) => {
 // ===== Pagamentos =====
 app.get('/api/pagamentos', async (req, res) => {
   try {
+    await ensurePagamentoSchema();
     const pagamentos = await prisma.pagamento.findMany({
       include: { aluno: { include: { plano: true } } },
       orderBy: { createdAt: 'desc' },
@@ -481,6 +514,7 @@ app.post('/api/pagamentos', async (req, res) => {
   const statusPagamento = status || 'confirmado';
 
   try {
+    await ensurePagamentoSchema();
     const result = await prisma.$transaction(async (tx) => {
       const created = await tx.pagamento.create({
         data: {
