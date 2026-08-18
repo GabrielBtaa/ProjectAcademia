@@ -22,8 +22,16 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(getTemaInicial);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.style.colorScheme = theme;
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    root.style.colorScheme = theme;
+    if (theme === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    } else {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    }
     localStorage.setItem('theme', theme);
   }, [theme]);
 

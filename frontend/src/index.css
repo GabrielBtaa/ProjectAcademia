@@ -63,24 +63,24 @@ html[data-theme='dark'] {
   --text-muted: #6b7280;
 }
 
-html[data-theme='light'] {
-  --bg-page: #f3f4f6;
-  --surface-card: rgba(255, 255, 255, 0.92);
-  --surface-card-alt: rgba(243, 244, 246, 0.9);
+html[data-theme='light'], html.light {
+  --bg-page: #f1f5f9;
+  --surface-card: #ffffff;
+  --surface-card-alt: #f8fafc;
   --surface-modal: #ffffff;
-  --surface-alt-1: rgba(229, 231, 235, 0.6);
-  --surface-alt-2: rgba(229, 231, 235, 0.8);
-  --surface-alt-3: rgba(209, 213, 219, 0.8);
-  --border-1: rgba(209, 213, 219, 0.7);
-  --border-2: rgba(209, 213, 219, 0.9);
-  --border-3: rgba(156, 163, 175, 0.6);
-  --border-4: rgba(156, 163, 175, 0.8);
-  --text-heading: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #6b7280;
+  --surface-alt-1: #f1f5f9;
+  --surface-alt-2: #e2e8f0;
+  --surface-alt-3: #cbd5e1;
+  --border-1: #e2e8f0;
+  --border-2: #cbd5e1;
+  --border-3: #94a3b8;
+  --border-4: #64748b;
+  --text-heading: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
 }
 
-html[data-theme='light'] body {
+html[data-theme='light'] body, html.light body {
   background-color: var(--bg-page);
   color: var(--text-heading);
 }
