@@ -277,7 +277,7 @@ function AlunoCard({ aluno, onEdit, onDelete }) {
  * Página de Gestão de Alunos
  * CRUD completo com busca, filtros, paginação e modal de cadastro/edição.
  */
-export default function Alunos() {
+export default function Alunos({ searchTerm = '' }) {
   const [alunos, setAlunos] = useState([]);
   const [planos, setPlanos] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -316,6 +316,13 @@ export default function Alunos() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [modalAberto, setModalAberto] = useState(false);
   const [alunoEditando, setAlunoEditando] = useState(null);
+
+  useEffect(() => {
+    if (searchTerm) {
+      setBusca(searchTerm);
+      setPaginaAtual(1);
+    }
+  }, [searchTerm]);
 
   // useMemo: calcula status real por dataVencimento, filtra e busca
   const alunosFiltrados = useMemo(() => {

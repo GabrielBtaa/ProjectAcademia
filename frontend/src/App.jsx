@@ -33,6 +33,7 @@ function AppContent() {
   // Estado da navegação e sidebar mobile
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [buscaGlobal, setBuscaGlobal] = useState('');
 
   // Verificar hash da URL para mostrar registro
   useEffect(() => {
@@ -128,13 +129,17 @@ function AppContent() {
           title={currentPage.title}
           onMenuClick={() => setSidebarOpen(true)}
           onNavigate={setActivePage}
+          onSearch={(termo) => {
+            setBuscaGlobal(termo);
+            setActivePage('alunos');
+          }}
         />
 
         {/* Conteúdo da página - rolagem independente */}
         <main className="flex-1 overflow-y-auto">
           {/* Renderiza a página ativa de forma condicional */}
           {/* A key força re-montagem ao mudar de página (anima entrada) */}
-          <PageComponent key={activePage} />
+          <PageComponent key={activePage} searchTerm={buscaGlobal} />
         </main>
       </div>
     </div>

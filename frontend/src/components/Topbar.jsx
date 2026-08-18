@@ -18,14 +18,16 @@ const ICONE_TIPO = {
  * - title: string com o título da página atual
  * - onMenuClick: função para abrir a sidebar em mobile
  * - onNavigate: função(pageId) para navegar ao clicar em uma notificação
+ * - onSearch: função(termo) para buscar alunos
  */
-export default function Topbar({ title, onMenuClick, onNavigate }) {
+export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === 'light';
   const [notificacoes, setNotificacoes] = useState([]);
   const [painelAberto, setPainelAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
+  const [termoBusca, setTermoBusca] = useState('');
   const painelRef = useRef(null);
 
   const buscarNotificacoes = useCallback(async () => {
@@ -83,6 +85,12 @@ export default function Topbar({ title, onMenuClick, onNavigate }) {
     }
   };
 
+  const handleSubmitBusca = (event) => {
+    event.preventDefault();
+    const termo = termoBusca.trim();
+    if (termo) onSearch?.(termo);
+  };
+
   const bgHeader = isLight
     ? 'rgba(255, 255, 255, 0.9)'
     : 'rgba(13, 17, 40, 0.9)';
@@ -127,7 +135,8 @@ export default function Topbar({ title, onMenuClick, onNavigate }) {
       {/* Direita: Busca global + Notificações + Usuário */}
       <div className="flex items-center gap-2 lg:gap-3">
         {/* Campo de busca (visível em telas médias+) */}
-        <div
+        <form
+          onSubmit={handleSubmitBusca}
           className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg"
           style={{
             background: isLight ? '#f8fafc' : 'rgba(31, 41, 55, 0.8)',
@@ -140,8 +149,11 @@ export default function Topbar({ title, onMenuClick, onNavigate }) {
             placeholder="Buscar aluno..."
             className="bg-transparent text-sm outline-none w-40 lg:w-56"
             style={{ color: textHeading }}
+            value={termoBusca}
+            onChange={event => setTermoBusca(event.target.value)}
+            aria-label="Buscar aluno por nome, CPF ou WhatsApp"
           />
-        </div>
+        </form>
 
         {/* Botão de alternância Modo Claro / Escuro */}
         <button
