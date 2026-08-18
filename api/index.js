@@ -15,7 +15,10 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from public directory (for Vercel)
-const publicPath = path.join(process.cwd(), 'public');
+const fs = require('fs');
+const publicPath = fs.existsSync(path.resolve(__dirname, '../public'))
+  ? path.resolve(__dirname, '../public')
+  : path.resolve(process.cwd(), 'public');
 app.use(express.static(publicPath));
 
 // ===== Helpers =====
@@ -602,7 +605,10 @@ app.use((req, res) => {
     return res.status(404).json({ error: 'API route not found' });
   }
 
-  const fs = require('fs');
+  if (req.path.startsWith('/assets/')) {
+    return res.status(404).send('Asset not found');
+  }
+
   const indexPath = path.join(publicPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.setHeader('Content-Type', 'text/html');
