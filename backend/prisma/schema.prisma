@@ -26,6 +26,8 @@ model User {
   password String
   nome     String
   role     UserRole @default(usuario)
+  planos   Plano[]
+  alunos   Aluno[]
 }
 
 model Plano {
@@ -34,6 +36,8 @@ model Plano {
   duracao   Int
   valor     Decimal @db.Decimal(10, 2)
   descricao String?
+  ownerId   Int
+  owner     User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   alunos    Aluno[]
 }
 
@@ -58,7 +62,7 @@ model Pagamento {
 model Aluno {
   id             Int         @id @default(autoincrement())
   nome           String
-  cpf            String      @unique
+  cpf            String
   whatsapp       String
   dataNascimento DateTime    @db.Date
   dataVencimento DateTime    @db.Date
@@ -67,5 +71,9 @@ model Aluno {
   dataCadastro   DateTime    @default(now())
   planoId        Int
   plano          Plano       @relation(fields: [planoId], references: [id], onDelete: Restrict)
+  ownerId        Int
+  owner          User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   pagamentos     Pagamento[]
+
+  @@unique([cpf, ownerId])
 }

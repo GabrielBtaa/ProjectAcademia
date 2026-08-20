@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 // Item de configuração genérico
 function SettingItem({ icon: Icon, title, description, children }) {
@@ -114,13 +114,8 @@ export default function Configuracoes() {
 
     setSenhaLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(apiUrl('/api/auth/senha'), {
+      const res = await apiFetch('/api/auth/senha', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
         body: JSON.stringify({
           senhaAtual: senhaForm.senhaAtual,
           novaSenha: senhaForm.novaSenha,

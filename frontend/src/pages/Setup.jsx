@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dumbbell, Plus, Check, AlertCircle } from 'lucide-react';
-import { apiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 export default function Setup({ onComplete }) {
   const [step, setStep] = useState(1); // 1: criar plano, 2: criar aluno
@@ -53,7 +53,7 @@ export default function Setup({ onComplete }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(apiUrl('/api/planos'), {
+      const res = await apiFetch(('/api/planos'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -83,7 +83,7 @@ export default function Setup({ onComplete }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(apiUrl('/api/alunos'), {
+      const res = await apiFetch(('/api/alunos'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

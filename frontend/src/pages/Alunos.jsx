@@ -13,7 +13,7 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
-import { apiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 // ===== Constantes =====
 const ITENS_POR_PAGINA = 5;
@@ -288,8 +288,8 @@ export default function Alunos({ searchTerm = '' }) {
     setErroApi(null);
     try {
       const [plRes, alRes] = await Promise.all([
-        fetch(apiUrl('/api/planos')),
-        fetch(apiUrl('/api/alunos')),
+        apiFetch(('/api/planos')),
+        apiFetch(('/api/alunos')),
       ]);
       if (!plRes.ok || !alRes.ok) {
         const t = !plRes.ok ? await plRes.text() : await alRes.text();
@@ -385,7 +385,7 @@ export default function Alunos({ searchTerm = '' }) {
     };
     try {
       if (alunoEditando) {
-        const res = await fetch(apiUrl(`/api/alunos/${alunoEditando.id}`), {
+        const res = await apiFetch((`/api/alunos/${alunoEditando.id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -394,7 +394,7 @@ export default function Alunos({ searchTerm = '' }) {
         if (!res.ok) throw new Error(body.error || res.statusText);
         setAlunos(prev => prev.map(a => (a.id === body.id ? body : a)));
       } else {
-        const res = await fetch(apiUrl('/api/alunos'), {
+        const res = await apiFetch(('/api/alunos'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -414,7 +414,7 @@ export default function Alunos({ searchTerm = '' }) {
   const handleExcluir = async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir este aluno?')) return;
     try {
-      const res = await fetch(apiUrl(`/api/alunos/${id}`), { method: 'DELETE' });
+      const res = await apiFetch((`/api/alunos/${id}`), { method: 'DELETE' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || res.statusText);

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, Menu, Search, LogOut, User, AlertTriangle, Clock, CreditCard, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 const ICONE_TIPO = {
   vencido: { icon: AlertTriangle, color: '#f87171' },
@@ -33,7 +33,7 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
   const buscarNotificacoes = useCallback(async () => {
     setCarregando(true);
     try {
-      const res = await fetch(apiUrl('/api/notificacoes'));
+      const res = await apiFetch(('/api/notificacoes'));
       if (!res.ok) throw new Error('Erro ao buscar notificações');
       const data = await res.json();
       setNotificacoes(data.notificacoes || []);

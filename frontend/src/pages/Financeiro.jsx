@@ -12,7 +12,7 @@ import {
   TrendingUp,
   PackagePlus,
 } from 'lucide-react';
-import { apiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 // ===== Sub-componente: Modal de Plano =====
 function PlanoModal({ plano, onClose, onSave }) {
@@ -219,9 +219,9 @@ export default function Financeiro() {
       setError(null);
       try {
         const [planosRes, alunosRes, pagamentosRes] = await Promise.all([
-          fetch(apiUrl('/api/planos')),
-          fetch(apiUrl('/api/alunos')),
-          fetch(apiUrl('/api/pagamentos')),
+          apiFetch(('/api/planos')),
+          apiFetch(('/api/alunos')),
+          apiFetch(('/api/pagamentos')),
         ]);
 
         if (!planosRes.ok || !alunosRes.ok || !pagamentosRes.ok) {
@@ -271,7 +271,7 @@ export default function Financeiro() {
   const handleSalvarPlano = async (dados) => {
     try {
       if (planoEditando) {
-        const response = await fetch(apiUrl(`/api/planos/${planoEditando.id}`), {
+        const response = await apiFetch((`/api/planos/${planoEditando.id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dados),
@@ -280,7 +280,7 @@ export default function Financeiro() {
         const updated = await response.json();
         setPlanos(prev => prev.map(p => p.id === updated.id ? updated : p));
       } else {
-        const response = await fetch(apiUrl('/api/planos'), {
+        const response = await apiFetch(('/api/planos'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dados),
@@ -300,7 +300,7 @@ export default function Financeiro() {
 
   const handleSalvarPagamento = async (dados) => {
     try {
-      const response = await fetch(apiUrl('/api/pagamentos'), {
+      const response = await apiFetch(('/api/pagamentos'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dados),
@@ -321,7 +321,7 @@ export default function Financeiro() {
         )));
       }
       try {
-        const alunosRes = await fetch(apiUrl('/api/alunos'));
+        const alunosRes = await apiFetch(('/api/alunos'));
         if (alunosRes.ok) setAlunos(await alunosRes.json());
       } catch { /* mantém a atualização otimista se a releitura falhar */ }
 
@@ -339,7 +339,7 @@ export default function Financeiro() {
   const handleExcluirPlano = async (id) => {
     if (!window.confirm('Excluir este plano?')) return;
     try {
-      const response = await fetch(apiUrl(`/api/planos/${id}`), { method: 'DELETE' });
+      const response = await apiFetch((`/api/planos/${id}`), { method: 'DELETE' });
       if (!response.ok) throw new Error(await response.text());
       setPlanos(prev => prev.filter(p => p.id !== id));
     } catch (deleteError) {

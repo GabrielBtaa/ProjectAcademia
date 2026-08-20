@@ -21,7 +21,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { apiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 const MESES_ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const CORES_PLANO = ['#3b82f6', '#34d399', '#f59e0b', '#a78bfa', '#f87171', '#22d3ee'];
@@ -186,8 +186,8 @@ export default function Dashboard() {
       setError(null);
       try {
         const [alunosResponse, pagamentosResponse] = await Promise.all([
-          fetch(apiUrl('/api/alunos')),
-          fetch(apiUrl('/api/pagamentos')),
+          apiFetch(('/api/alunos')),
+          apiFetch(('/api/pagamentos')),
         ]);
 
         if (!alunosResponse.ok || !pagamentosResponse.ok) {

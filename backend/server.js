@@ -296,9 +296,16 @@ app.put("/api/auth/senha", async (req, res) => {
   }
 });
 
+// Todas as rotas abaixo exigem um token válido (login) — dados de alunos,
+// planos e pagamentos nunca devem ficar acessíveis sem autenticação.
+app.use("/api/planos", authenticateToken);
+app.use("/api/alunos", authenticateToken);
+app.use("/api/pagamentos", authenticateToken);
+app.use("/api/notificacoes", authenticateToken);
+
 app.get("/api/planos", async (req, res) => {
   try {
-    const planos = await prisma.plano.findMany({ orderBy: { id: "asc" } });
+    const planos = await prisma.plano.findMany({ where: { ownerId: req.user.id }, orderBy: { id: "asc" } });
     res.json(planos.map(serializePlano));
   } catch (e) {
     console.error(e);
@@ -318,6 +325,7 @@ app.post("/api/planos", async (req, res) => {
         duracao: Number(duracao),
         valor: Number(valor),
         descricao: descricao ? String(descricao) : null,
+        ownerId: req.user.id,
       },
     });
     res.status(201).json(serializePlano(created));
@@ -334,6 +342,8 @@ app.put("/api/planos/:id", async (req, res) => {
     return res.status(400).json({ error: "ID, nome, duração e valor são obrigatórios" });
   }
   try {
+    const existente = await prisma.plano.findFirst({ where: { id, ownerId: req.user.id } });
+    if (!existente) return res.status(404).json({ error: "Plano não encontrado" });
     const updated = await prisma.plano.update({
       where: { id },
       data: {
@@ -354,6 +364,8 @@ app.delete("/api/planos/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: "ID inválido" });
   try {
+    const existente = await prisma.plano.findFirst({ where: { id, ownerId: req.user.id } });
+    if (!existente) return res.status(404).json({ error: "Plano não encontrado" });
     await prisma.plano.delete({ where: { id } });
     res.status(204).end();
   } catch (e) {
@@ -365,6 +377,7 @@ app.delete("/api/planos/:id", async (req, res) => {
 app.get("/api/alunos", async (req, res) => {
   try {
     const alunos = await prisma.aluno.findMany({
+      where: { ownerId: req.user.id },
       include: { plano: true },
       orderBy: { id: "asc" },
     });
@@ -391,6 +404,7 @@ app.post("/api/alunos", async (req, res) => {
         planoId: Number(planoId),
         status: status || "ativo",
         avatar: avatarFromNome(String(nome)),
+        ownerId: req.user.id,
       },
       include: { plano: true },
     });
@@ -412,6 +426,8 @@ app.put("/api/alunos/:id", async (req, res) => {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
   try {
+    const existente = await prisma.aluno.findFirst({ where: { id, ownerId: req.user.id } });
+    if (!existente) return res.status(404).json({ error: "Aluno não encontrado" });
     const updated = await prisma.aluno.update({
       where: { id },
       data: {
@@ -443,6 +459,8 @@ app.delete("/api/alunos/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: "ID inválido" });
   try {
+    const existente = await prisma.aluno.findFirst({ where: { id, ownerId: req.user.id } });
+    if (!existente) return res.status(404).json({ error: "Aluno não encontrado" });
     await prisma.aluno.delete({ where: { id } });
     res.status(204).end();
   } catch (e) {
@@ -457,6 +475,7 @@ app.delete("/api/alunos/:id", async (req, res) => {
 app.get("/api/pagamentos", async (req, res) => {
   try {
     const pagamentos = await prisma.pagamento.findMany({
+      where: { aluno: { ownerId: req.user.id } },
       include: {
         aluno: {
           include: { plano: true },
@@ -490,6 +509,8 @@ app.post("/api/pagamentos", async (req, res) => {
   const statusPagamento = status || "confirmado";
 
   try {
+    const alunoDoDono = await prisma.aluno.findFirst({ where: { id: Number(alunoId), ownerId: req.user.id } });
+    if (!alunoDoDono) return res.status(404).json({ error: "Aluno não encontrado" });
     const result = await prisma.$transaction(async (tx) => {
       const created = await tx.pagamento.create({
         data: {
@@ -534,6 +555,8 @@ app.delete("/api/pagamentos/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: "ID inválido" });
   try {
+    const existente = await prisma.pagamento.findFirst({ where: { id, aluno: { ownerId: req.user.id } } });
+    if (!existente) return res.status(404).json({ error: "Pagamento não encontrado" });
     await prisma.pagamento.delete({ where: { id } });
     res.status(204).end();
   } catch (e) {
@@ -553,9 +576,9 @@ app.get("/api/notificacoes", async (req, res) => {
     em5dias.setDate(em5dias.getDate() + 5);
 
     const [alunos, pagamentosPendentes] = await Promise.all([
-      prisma.aluno.findMany({ include: { plano: true } }),
+      prisma.aluno.findMany({ where: { ownerId: req.user.id }, include: { plano: true } }),
       prisma.pagamento.findMany({
-        where: { status: "pendente" },
+        where: { status: "pendente", aluno: { ownerId: req.user.id } },
         include: { aluno: true },
         orderBy: { createdAt: "desc" },
       }),

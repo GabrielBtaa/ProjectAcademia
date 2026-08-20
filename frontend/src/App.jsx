@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { apiFetch } from './lib/api';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import Dashboard from './pages/Dashboard';
@@ -67,7 +68,7 @@ function AppContent() {
 
     const checkSetup = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API || '/api'}/planos`);
+        const res = await apiFetch('/api/planos');
         if (!res.ok) throw new Error('Erro ao verificar planos');
         const planos = await res.json();
         setNeedsSetup(planos.length === 0);
