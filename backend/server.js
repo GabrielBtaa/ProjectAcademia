@@ -5,7 +5,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "./lib/prisma.js";
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY || "");
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require("stripe")(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 const app = express();
 
@@ -672,6 +674,7 @@ app.get("/api/billing/status", authenticateToken, async (req, res) => {
 });
 
 app.post("/api/billing/checkout", authenticateToken, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamentos ainda não configurados no servidor" });
   const { plano } = req.body || {};
   const priceId = PRICE_IDS[plano];
   if (!priceId) return res.status(400).json({ error: "Plano inválido" });
@@ -700,6 +703,7 @@ app.post("/api/billing/checkout", authenticateToken, async (req, res) => {
 });
 
 app.post("/api/billing/webhook", async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamentos ainda não configurados no servidor" });
   const sig = req.headers["stripe-signature"];
   let event;
   try {
