@@ -7,6 +7,8 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
+
 const app = express();
 
 // Instalações antigas podem ter sido criadas antes da tabela de pagamentos
@@ -48,7 +50,7 @@ const corsOrigins = process.env.FRONTEND_ORIGIN
   : true;
 
 app.use(cors({ origin: corsOrigins }));
-app.use(express.json());
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // ===== Autenticação =====
 function authenticateToken(req, res, next) {
@@ -73,7 +75,11 @@ const fs = require('fs');
 const publicPath = fs.existsSync(path.resolve(__dirname, '../public'))
   ? path.resolve(__dirname, '../public')
   : path.resolve(process.cwd(), 'public');
-app.use(express.static(publicPath));
+app.use(express.static(publicPath, { index: false }));
+
+// "/" é a página de vendas; o sistema fica em "/app"
+app.get('/', (req, res) => res.sendFile(path.join(publicPath, 'vendas.html')));
+app.get(['/app', '/app/*'], (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
 
 // ===== Helpers =====
 function avatarFromNome(nome) {
@@ -307,12 +313,32 @@ app.put('/api/auth/senha', async (req, res) => {
   }
 });
 
+// Mapeia cada pacote de venda ao limite de alunos correspondente
+const LIMITES_POR_PLANO = { starter: 50, pro: 100, business: 250 };
+
+// Bloqueia acesso aos dados se a conta não tiver assinatura ativa.
+// Contas com role "admin" (a sua) sempre passam, liberado pra teste.
+async function requireActiveSubscription(req, res, next) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
+    if (user.role === 'admin' || user.subscriptionStatus === 'active') {
+      req.currentUser = user;
+      return next();
+    }
+    return res.status(402).json({ error: 'Assinatura inativa. Escolha um plano para continuar.', code: 'SUBSCRIPTION_REQUIRED' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao verificar assinatura' });
+  }
+}
+
 // Todas as rotas abaixo exigem um token válido (login) — dados de alunos,
 // planos e pagamentos nunca devem ficar acessíveis sem autenticação.
-app.use('/api/planos', authenticateToken);
-app.use('/api/alunos', authenticateToken);
-app.use('/api/pagamentos', authenticateToken);
-app.use('/api/notificacoes', authenticateToken);
+app.use('/api/planos', authenticateToken, requireActiveSubscription);
+app.use('/api/alunos', authenticateToken, requireActiveSubscription);
+app.use('/api/pagamentos', authenticateToken, requireActiveSubscription);
+app.use('/api/notificacoes', authenticateToken, requireActiveSubscription);
 
 // ===== Planos =====
 app.get('/api/planos', async (req, res) => {
@@ -431,6 +457,12 @@ app.post('/api/alunos', async (req, res) => {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
   }
   try {
+    if (req.currentUser.role !== 'admin') {
+      const totalAtual = await prisma.aluno.count({ where: { ownerId: req.user.id } });
+      if (totalAtual >= req.currentUser.maxAlunos) {
+        return res.status(402).json({ error: `Limite do seu plano atingido (${req.currentUser.maxAlunos} alunos). Faça upgrade para cadastrar mais.`, code: 'LIMIT_REACHED' });
+      }
+    }
     const created = await prisma.aluno.create({
       data: {
         nome: String(nome),
@@ -678,7 +710,101 @@ app.get('/api/notificacoes', async (req, res) => {
   }
 });
 
-// SPA fallback - serve index.html for non-API routes
+// ===== Billing (Stripe) =====
+const PRICE_IDS = {
+  starter: process.env.STRIPE_PRICE_STARTER,
+  pro: process.env.STRIPE_PRICE_PRO,
+  business: process.env.STRIPE_PRICE_BUSINESS,
+};
+
+// Retorna o status atual da assinatura do usuário logado
+app.get('/api/billing/status', authenticateToken, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+  res.json({
+    subscriptionStatus: user.subscriptionStatus,
+    subscriptionTier: user.subscriptionTier,
+    maxAlunos: user.maxAlunos,
+    isAdmin: user.role === 'admin',
+  });
+});
+
+// Cria uma sessão de Checkout do Stripe para o plano escolhido
+app.post('/api/billing/checkout', authenticateToken, async (req, res) => {
+  const { plano } = req.body || {};
+  const priceId = PRICE_IDS[plano];
+  if (!priceId) return res.status(400).json({ error: 'Plano inválido' });
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: user.email, name: user.nome });
+      customerId = customer.id;
+      await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
+    }
+
+    const origin = process.env.FRONTEND_ORIGIN || 'https://projeto-academia-sable.vercel.app';
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${origin}/app?assinatura=sucesso`,
+      cancel_url: `${origin}/app?assinatura=cancelada`,
+      metadata: { userId: String(user.id), plano },
+    });
+
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao iniciar checkout' });
+  }
+});
+
+// Webhook do Stripe — precisa do corpo bruto (rawBody) pra verificar a assinatura
+app.post('/api/billing/webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook inválido:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const userId = Number(session.metadata?.userId);
+      const plano = session.metadata?.plano;
+      if (userId && plano && LIMITES_POR_PLANO[plano]) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { subscriptionStatus: 'active', subscriptionTier: plano, maxAlunos: LIMITES_POR_PLANO[plano] },
+        });
+      }
+    }
+
+    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+      const sub = event.data.object;
+      const user = await prisma.user.findFirst({ where: { stripeCustomerId: sub.customer } });
+      if (user) {
+        const ativo = sub.status === 'active' || sub.status === 'trialing';
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { subscriptionStatus: ativo ? 'active' : (sub.status === 'past_due' ? 'past_due' : 'canceled') },
+        });
+      }
+    }
+
+    res.json({ received: true });
+  } catch (e) {
+    console.error('Erro ao processar webhook:', e);
+    res.status(500).json({ error: 'Erro ao processar webhook' });
+  }
+});
+
+// Fallback - qualquer rota desconhecida cai na página de vendas
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
@@ -688,10 +814,10 @@ app.use((req, res) => {
     return res.status(404).send('Asset not found');
   }
 
-  const indexPath = path.join(publicPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
+  const vendasPath = path.join(publicPath, 'vendas.html');
+  if (fs.existsSync(vendasPath)) {
     res.setHeader('Content-Type', 'text/html');
-    res.send(fs.readFileSync(indexPath));
+    res.send(fs.readFileSync(vendasPath));
   } else {
     res.status(404).send('Not found');
   }

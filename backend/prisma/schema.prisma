@@ -21,13 +21,17 @@ enum StatusAluno {
 }
 
 model User {
-  id       Int      @id @default(autoincrement())
-  email    String   @unique
-  password String
-  nome     String
-  role     UserRole @default(usuario)
-  planos   Plano[]
-  alunos   Aluno[]
+  id                   Int      @id @default(autoincrement())
+  email                String   @unique
+  password             String
+  nome                 String
+  role                 UserRole @default(usuario)
+  planos               Plano[]
+  alunos               Aluno[]
+  stripeCustomerId     String?
+  subscriptionStatus   String   @default("inactive") // inactive | active | past_due | canceled
+  subscriptionTier     String? // starter | pro | business
+  maxAlunos            Int      @default(0)
 }
 
 model Plano {

@@ -11,6 +11,7 @@ import Configuracoes from './pages/Configuracoes';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Setup from './pages/Setup';
+import Assinatura from './pages/Assinatura';
 
 const backend = import.meta.env.VITE_BACKEND;
 
@@ -30,6 +31,7 @@ function AppContent() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [billing, setBilling] = useState(null);
 
   // Estado da navegação e sidebar mobile
   const [activePage, setActivePage] = useState('dashboard');
@@ -81,8 +83,20 @@ function AppContent() {
     checkSetup();
   }, [user]);
 
-  // Mostrar loading enquanto verifica autenticação
-  if (loading || needsSetup === null) {
+  // Verificar se a conta tem assinatura ativa (admin sempre libera)
+  useEffect(() => {
+    if (!user) {
+      setBilling(null);
+      return;
+    }
+    apiFetch('/api/billing/status')
+      .then(res => res.json())
+      .then(setBilling)
+      .catch(() => setBilling({ subscriptionStatus: 'active', isAdmin: false }));
+  }, [user]);
+
+  // Mostra loading enquanto verifica autenticação, plano e assinatura
+  if (loading || needsSetup === null || (user && billing === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
@@ -96,6 +110,11 @@ function AppContent() {
   // Mostrar login ou registro se não estiver autenticado
   if (!user) {
     return showRegister ? <Register /> : <Login />;
+  }
+
+  // Bloqueia o app se a conta não tiver assinatura ativa (admin sempre passa)
+  if (billing && !billing.isAdmin && billing.subscriptionStatus !== 'active') {
+    return <Assinatura />;
   }
 
   // Mostrar setup se não houver planos
