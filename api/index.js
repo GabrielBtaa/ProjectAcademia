@@ -81,7 +81,7 @@ app.use(express.static(publicPath, { index: false }));
 
 // "/" é a página de vendas; o sistema fica em "/app"
 app.get('/', (req, res) => res.sendFile(path.join(publicPath, 'vendas.html')));
-app.get(['/app', '/app/*'], (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
+app.get(['/app', '/app/*splat'], (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
 
 // ===== Helpers =====
 function avatarFromNome(nome) {
