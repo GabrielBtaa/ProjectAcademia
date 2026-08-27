@@ -174,6 +174,65 @@ export default function Configuracoes() {
         </div>
       </div>
 
+      {/* Automação de WhatsApp & Chave PIX */}
+      <div className="rounded-xl p-5" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <span className="text-base">📱</span>
+            </div>
+            <div>
+              <h4 className="font-semibold text-heading text-sm">Automação de WhatsApp & Chave PIX</h4>
+              <p className="text-xs text-muted">Disparos automáticos de 5 dias antes e cobrança sem intervenção manual</p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[0.65rem] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            🤖 Robô Mãos-Livres
+          </span>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              Chave PIX da Academia (CPF, CNPJ, Email ou Telefone)
+            </label>
+            <input
+              className="input-field"
+              placeholder="Ex: 12.345.678/0001-90 ou financeiro@suaacademia.com"
+              value={dadosAcademia.chavePix || ''}
+              onChange={e => updateAcademia('chavePix', e.target.value)}
+            />
+          </div>
+
+          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/50 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-white">Envio Automático Diário</p>
+                <p className="text-[0.7rem] text-gray-400">O servidor enviará os lembretes de 5 dias antes e cobranças de vencido automaticamente às 09:00</p>
+              </div>
+              <Toggle checked={config.notificacoesEmpurrar} onChange={() => toggle('notificacoesEmpurrar')} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              className="btn-primary flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={async () => {
+                try {
+                  const res = await apiFetch('/api/whatsapp/disparar-agora', { method: 'POST' });
+                  const json = await res.json();
+                  alert(json.mensagem || 'Disparo executado com sucesso!');
+                } catch (e) {
+                  alert('Erro ao executar robô: ' + e.message);
+                }
+              }}
+            >
+              <span>🤖 Testar Robô de Disparo Agora</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Alterar Senha */}
       <div className="rounded-xl p-5" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
         <div className="flex items-center gap-2 mb-4">

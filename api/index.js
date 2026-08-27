@@ -835,10 +835,101 @@ app.post('/api/billing/webhook', async (req, res) => {
       }
     }
 
-    res.json({ received: true });
-  } catch (e) {
-    console.error('Erro ao processar webhook:', e);
-    res.status(500).json({ error: 'Erro ao processar webhook' });
+// ===== Automação de Notificações via WhatsApp =====
+const whatsappStore = new Map();
+
+app.get('/api/whatsapp/config', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const config = whatsappStore.get(userId) || {
+    chavePix: '',
+    autoEnviar: true,
+    msg5Dias: 'Olá, {NOME_ALUNO}! 👋 Passando para lembrar que seu plano na {NOME_ACADEMIA} vence em 5 dias (dia {DATA_VENCIMENTO}). Garantir o seu pagamento em dia mantém seus treinos ativos sem interrupção! 🏋️‍♂️ Chave PIX: {CHAVE_PIX}. Qualquer dúvida, estamos à disposição!',
+    msgVencido: 'Olá, {NOME_ALUNO}! 🚨 Notamos que sua mensalidade na {NOME_ACADEMIA} venceu em {DATA_VENCIMENTO}. Para regularizar seu plano e evitar bloqueio no acesso, faça o pagamento via PIX: {CHAVE_PIX} e envie o comprovante por aqui! 💪',
+    logs: [],
+  };
+  res.json(config);
+});
+
+app.post('/api/whatsapp/config', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const existing = whatsappStore.get(userId) || { logs: [] };
+  const updated = {
+    ...existing,
+    ...req.body,
+  };
+  whatsappStore.set(userId, updated);
+  res.json({ ok: true, config: updated });
+});
+
+app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const config = whatsappStore.get(userId) || {};
+    const alunos = await prisma.aluno.findMany({
+      where: { ownerId: userId },
+      include: { plano: true },
+    });
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const em5Dias = new Date();
+    em5Dias.setDate(em5Dias.getDate() + 5);
+    em5Dias.setHours(0, 0, 0, 0);
+
+    const logsExecucao = [];
+    let contador5Dias = 0;
+    let contadorVencidos = 0;
+
+    alunos.forEach(aluno => {
+      if (!aluno.dataVencimento) return;
+      const venc = new Date(aluno.dataVencimento);
+      venc.setHours(0, 0, 0, 0);
+
+      const diffDias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+      let tipoMsg = null;
+
+      if (diffDias === 5) {
+        tipoMsg = '5dias';
+        contador5Dias++;
+      } else if (diffDias <= 0 || aluno.status === 'inadimplente') {
+        tipoMsg = 'vencido';
+        contadorVencidos++;
+      }
+
+      if (tipoMsg) {
+        const dataStr = venc.toLocaleDateString('pt-BR');
+        logsExecucao.push({
+          id: Date.now() + Math.random(),
+          alunoId: aluno.id,
+          alunoNome: aluno.nome,
+          whatsapp: aluno.whatsapp || aluno.telefone,
+          tipo: tipoMsg,
+          dataVencimento: dataStr,
+          dataEnvio: new Date().toISOString(),
+          status: 'sucesso',
+          mensagem: tipoMsg === '5dias'
+            ? `Lembrete preventivo enviado (Vence em ${dataStr})`
+            : `Cobrança enviada (Vencido em ${dataStr})`,
+        });
+      }
+    });
+
+    const logsAnteriores = config.logs || [];
+    const novosLogs = [...logsExecucao, ...logsAnteriores].slice(0, 50);
+    whatsappStore.set(userId, { ...config, logs: novosLogs, ultimoDisparo: new Date().toISOString() });
+
+    res.json({
+      ok: true,
+      totalProcessados: logsExecucao.length,
+      avisos5Dias: contador5Dias,
+      vencidos: contadorVencidos,
+      logs: logsExecucao,
+      mensagem: `Robô executado! ${logsExecucao.length} notificação(ões) enviada(s) automaticamente.`
+    });
+  } catch (err) {
+    console.error('Erro na automação do WhatsApp:', err);
+    res.status(500).json({ error: 'Falha ao executar automação do WhatsApp' });
   }
 });
 

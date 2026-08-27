@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { gerarLinkWhatsApp } from '../lib/whatsapp';
 
 // ===== Constantes =====
 const ITENS_POR_PAGINA = 5;
@@ -595,6 +596,18 @@ export default function Alunos({ searchTerm = '' }) {
                     {/* Ações */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
+                        {gerarLinkWhatsApp({ aluno, tipo: diasVenc <= 5 ? '5dias' : 'vencido' }) && (
+                          <a
+                            href={gerarLinkWhatsApp({ aluno, tipo: diasVenc <= 5 ? '5dias' : 'vencido' })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-lg transition-all flex items-center justify-center"
+                            style={{ color: '#34d399', background: 'rgba(52, 211, 153, 0.12)' }}
+                            title="Enviar Notificação no WhatsApp"
+                          >
+                            <span className="text-xs">📱</span>
+                          </a>
+                        )}
                         <button
                           onClick={() => handleEditar(aluno)}
                           className="p-1.5 rounded-lg transition-all"
