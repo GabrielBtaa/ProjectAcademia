@@ -79,9 +79,14 @@ const publicPath = fs.existsSync(path.resolve(__dirname, '../public'))
   : path.resolve(process.cwd(), 'public');
 app.use(express.static(publicPath, { index: false }));
 
-// "/" é a página de vendas; o sistema fica em "/app"
-app.get('/', (req, res) => res.sendFile(path.join(publicPath, 'vendas.html')));
-app.get(['/app', '/app/*splat'], (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
+// "/" serve a aplicação React (index.html)
+app.get('/', (req, res) => {
+  const indexPath = path.join(publicPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  return res.status(404).send('Página principal não encontrada');
+});
 
 // ===== Helpers =====
 function avatarFromNome(nome) {
