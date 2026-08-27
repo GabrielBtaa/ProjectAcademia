@@ -11,7 +11,7 @@ import Configuracoes from './pages/Configuracoes';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Setup from './pages/Setup';
-import Assinatura from './pages/Assinatura';
+import LandingPage from './pages/LandingPage';
 
 const backend = import.meta.env.VITE_BACKEND;
 
@@ -106,9 +106,20 @@ function AppContent() {
     );
   }
 
-  // Mostrar login ou registro se não estiver autenticado
+  // Mostrar Landing Page, Login ou Registro se não estiver autenticado
   if (!user) {
-    return showRegister ? <Register /> : <Login />;
+    if (authView === 'login') {
+      return <Login />;
+    }
+    if (authView === 'register') {
+      return <Register />;
+    }
+    return (
+      <LandingPage
+        onOpenLogin={() => setAuthView('login')}
+        onOpenRegister={() => setAuthView('register')}
+      />
+    );
   }
 
   // Bloqueia o app se a conta não tiver assinatura ativa (admin sempre passa)
