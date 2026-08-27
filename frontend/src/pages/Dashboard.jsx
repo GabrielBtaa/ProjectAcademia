@@ -253,10 +253,12 @@ export default function Dashboard() {
     const refresh = () => fetchDashboardData();
     const interval = window.setInterval(refresh, 30000);
     window.addEventListener('gymflow:data-changed', refresh);
+    window.addEventListener('gymflow:payment-saved', refresh);
     window.addEventListener('focus', refresh);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener('gymflow:data-changed', refresh);
+      window.removeEventListener('gymflow:payment-saved', refresh);
       window.removeEventListener('focus', refresh);
     };
   }, [fetchDashboardData]);

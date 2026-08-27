@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +11,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Itens de navegação da sidebar
 const NAV_ITEMS = [
@@ -20,9 +21,36 @@ const NAV_ITEMS = [
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
 
+function getNomeAcademia() {
+  try {
+    const salvo = localStorage.getItem('gymflow_dados_academia');
+    if (salvo) {
+      const parsed = JSON.parse(salvo);
+      if (parsed.nomeAcademia && parsed.nomeAcademia.trim()) return parsed.nomeAcademia.trim();
+    }
+  } catch {}
+  return 'GymFlow';
+}
+
+function getSiglaUsuario(nome) {
+  if (!nome) return 'US';
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  const p1 = partes[0] ? partes[0][0] : '';
+  const p2 = partes.length > 1 ? partes[partes.length - 1][0] : '';
+  return (p1 + p2).toUpperCase() || 'US';
+}
+
 export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) {
   const { theme } = useTheme();
+  const { user, logout } = useAuth();
   const isLight = theme === 'light';
+  const [nomeAcademia, setNomeAcademia] = useState(getNomeAcademia);
+
+  useEffect(() => {
+    const updateNome = () => setNomeAcademia(getNomeAcademia());
+    window.addEventListener('gymflow:settings-updated', updateNome);
+    return () => window.removeEventListener('gymflow:settings-updated', updateNome);
+  }, []);
 
   const handleNavClick = (pageId) => {
     setActivePage(pageId);
@@ -40,6 +68,8 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
   const textPrimary = isLight ? '#0f172a' : '#ffffff';
   const textMuted = isLight ? '#64748b' : '#6b7280';
   const textNavDefault = isLight ? '#475569' : '#9ca3af';
+
+  const sigla = getSiglaUsuario(user?.nome);
 
   return (
     <>
@@ -74,8 +104,8 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
             >
               <Dumbbell size={18} color="white" />
             </div>
-            <div>
-              <h1 className="font-bold text-sm leading-tight" style={{ color: textPrimary }}>GymFlow</h1>
+            <div className="min-w-0">
+              <h1 className="font-bold text-sm leading-tight truncate" style={{ color: textPrimary }}>{nomeAcademia}</h1>
               <p style={{ color: textMuted, fontSize: '0.65rem' }}>Sistema de Gestão</p>
             </div>
           </div>
@@ -144,14 +174,16 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
         >
           <div className="flex items-center gap-3 mb-3">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm"
               style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
             >
-              US
+              {sigla}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: textPrimary }}>Usuário</p>
-              <p className="text-xs truncate" style={{ color: textMuted }}>Conectado</p>
+              <p className="text-xs font-semibold truncate" style={{ color: textPrimary }}>{user?.nome || 'Usuário'}</p>
+              <p className="text-xs truncate capitalize" style={{ color: textMuted }}>
+                {user?.role === 'admin' ? 'Administrador' : 'Usuário'}
+              </p>
             </div>
           </div>
 
@@ -163,7 +195,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
               border: isLight ? '1px solid rgba(37, 99, 235, 0.15)' : '1px solid rgba(37, 99, 235, 0.15)'
             }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.2.1</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.3.0</p>
           </div>
         </div>
       </aside>

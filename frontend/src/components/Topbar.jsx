@@ -150,7 +150,11 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
             className="bg-transparent text-sm outline-none w-40 lg:w-56"
             style={{ color: textHeading }}
             value={termoBusca}
-            onChange={event => setTermoBusca(event.target.value)}
+            onChange={event => {
+              const val = event.target.value;
+              setTermoBusca(val);
+              if (onSearch) onSearch(val);
+            }}
             aria-label="Buscar aluno por nome, CPF ou WhatsApp"
           />
         </form>

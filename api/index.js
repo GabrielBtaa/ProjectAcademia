@@ -207,35 +207,52 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { email, password, nome } = req.body || {};
+    const { email, confirmarEmail, password, confirmarSenha, nome, celular, modeloNegocio } = req.body || {};
 
     if (!email || !password || !nome) {
-      return res.status(400).json({ error: 'Email, senha e nome são obrigatórios' });
+      return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+    if (confirmarEmail && cleanEmail !== String(confirmarEmail).trim().toLowerCase()) {
+      return res.status(400).json({ error: 'A confirmação de email não confere com o email informado' });
+    }
+
+    if (confirmarSenha && String(password) !== String(confirmarSenha)) {
+      return res.status(400).json({ error: 'A confirmação de senha não confere com a senha informada' });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email: cleanEmail }
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Email já cadastrado' });
+      return res.status(400).json({ error: 'Email já cadastrado. Faça login para acessar.' });
     }
 
+    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const hashedPassword = bcrypt.hashSync(String(password), 10);
+
     const user = await prisma.user.create({
       data: {
         email: cleanEmail,
         password: hashedPassword,
         nome: String(nome).trim(),
-        role: 'usuario'
+        role: 'usuario',
+        subscriptionStatus: 'trial',
+        subscriptionTier: 'pro',
+        maxAlunos: 9999,
       }
     });
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '30d' }
     );
 
     return res.json({
@@ -244,7 +261,9 @@ app.post('/api/auth/register', async (req, res) => {
         id: user.id,
         email: user.email,
         nome: user.nome,
-        role: user.role
+        role: user.role,
+        subscriptionStatus: 'trial',
+        trialEndsAt: trialEndsAt.toISOString(),
       }
     });
   } catch (error) {
@@ -345,7 +364,17 @@ app.use('/api/notificacoes', authenticateToken, requireActiveSubscription);
 // ===== Planos =====
 app.get('/api/planos', async (req, res) => {
   try {
-    const planos = await prisma.plano.findMany({ where: { ownerId: req.user.id }, orderBy: { id: 'asc' } });
+    let planos = await prisma.plano.findMany({ where: { ownerId: req.user.id }, orderBy: { id: 'asc' } });
+    if (planos.length === 0) {
+      const defaultPlanos = [
+        { nome: 'Plano Mensal', duracao: 1, valor: 119.00, descricao: 'Acesso mensal ilimitado a todas as modalidades', ownerId: req.user.id },
+        { nome: 'Plano Trimestral', duracao: 3, valor: 299.00, descricao: 'Economize com pagamento a cada 3 meses', ownerId: req.user.id },
+        { nome: 'Plano Semestral', duracao: 6, valor: 539.00, descricao: 'Plano semestral com desconto exclusivo', ownerId: req.user.id },
+        { nome: 'Plano Anual', duracao: 12, valor: 948.00, descricao: 'Melhor custo-benefício! Apenas R$ 79/mês', ownerId: req.user.id },
+      ];
+      await prisma.plano.createMany({ data: defaultPlanos });
+      planos = await prisma.plano.findMany({ where: { ownerId: req.user.id }, orderBy: { id: 'asc' } });
+    }
     res.json(planos.map(serializePlano));
   } catch (e) {
     console.error(e);

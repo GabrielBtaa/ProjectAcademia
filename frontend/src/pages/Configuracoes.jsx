@@ -91,6 +91,7 @@ export default function Configuracoes() {
   const handleSalvarAcademia = () => {
     setSalvandoAcademia(true);
     localStorage.setItem(CHAVE_ACADEMIA, JSON.stringify(dadosAcademia));
+    window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
     setTimeout(() => {
       setSalvandoAcademia(false);
       setAcademiaSalva(true);
