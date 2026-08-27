@@ -835,6 +835,13 @@ app.post('/api/billing/webhook', async (req, res) => {
       }
     }
 
+    res.json({ received: true });
+  } catch (e) {
+    console.error('Erro ao processar webhook:', e);
+    res.status(500).json({ error: 'Erro ao processar webhook' });
+  }
+});
+
 // ===== Automação de Notificações via WhatsApp =====
 const whatsappStore = new Map();
 
