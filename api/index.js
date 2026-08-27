@@ -847,12 +847,12 @@ app.use((req, res) => {
     return res.status(404).send('Asset not found');
   }
 
-  const vendasPath = path.join(publicPath, 'vendas.html');
-  if (fs.existsSync(vendasPath)) {
+  const indexPath = path.join(publicPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
     res.setHeader('Content-Type', 'text/html');
-    res.send(fs.readFileSync(vendasPath));
+    return res.send(fs.readFileSync(indexPath));
   } else {
-    res.status(404).send('Not found');
+    return res.status(404).send('Página não encontrada');
   }
 });
 
