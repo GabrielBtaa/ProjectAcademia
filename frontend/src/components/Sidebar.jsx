@@ -195,7 +195,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
               border: isLight ? '1px solid rgba(37, 99, 235, 0.15)' : '1px solid rgba(37, 99, 235, 0.15)'
             }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.3.0</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.4.0</p>
           </div>
         </div>
       </aside>

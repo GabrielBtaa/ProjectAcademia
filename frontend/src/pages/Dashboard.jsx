@@ -8,6 +8,9 @@ import {
   TrendingDown,
   Activity,
   CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  Crown,
 } from 'lucide-react';
 import {
   BarChart,
@@ -22,6 +25,7 @@ import {
   Cell,
 } from 'recharts';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const MESES_ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const CORES_PLANO = ['#3b82f6', '#34d399', '#f59e0b', '#a78bfa', '#f87171', '#22d3ee'];
@@ -143,6 +147,7 @@ function VencimentoItem({ aluno }) {
  * Usa dados reais da API para exibir informações atualizadas.
  */
 export default function Dashboard() {
+  const { user } = useAuth();
   const [metricas, setMetricas] = useState({
     totalAtivos: 0,
     inadimplentes: 0,
@@ -265,8 +270,69 @@ export default function Dashboard() {
 
   const taxaFrequencia = metricas.totalAlunos > 0 ? Math.round((metricas.totalAtivos / metricas.totalAlunos) * 100) : 0;
 
+  const diasTrialRestantes = user?.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(user.trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24)))
+    : 30;
+
+  const isAdmin = user?.role === 'admin';
+
   return (
     <div className="p-4 lg:p-6 space-y-6 page-enter">
+
+      {/* ===== Banner de Status de Conta / Trial ===== */}
+      <div
+        className="rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md"
+        style={{
+          background: isAdmin
+            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)'
+            : 'linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(29, 78, 216, 0.05) 100%)',
+          border: isAdmin
+            ? '1px solid rgba(245, 158, 11, 0.3)'
+            : '1px solid rgba(37, 99, 235, 0.3)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: isAdmin
+                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            }}
+          >
+            {isAdmin ? <Crown size={20} color="white" /> : <Sparkles size={20} color="white" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm text-heading">
+                {isAdmin ? 'Conta Administrador Ativa' : 'Teste Grátis de 30 Dias Ativo'}
+              </h3>
+              <span
+                className="px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase tracking-wider"
+                style={{
+                  background: isAdmin ? 'rgba(245, 158, 11, 0.2)' : 'rgba(37, 99, 235, 0.2)',
+                  color: isAdmin ? '#fbbf24' : '#60a5fa',
+                }}
+              >
+                {isAdmin ? 'Acesso Master' : `Restam ${diasTrialRestantes} dias`}
+              </span>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {isAdmin
+                ? 'Você possui acesso irrestrito de administrador a todas as funções da plataforma.'
+                : `Aproveite ${diasTrialRestantes} dias de acesso Pro liberado sem necessidade de cartão de crédito.`}
+            </p>
+          </div>
+        </div>
+
+        {!isAdmin && (
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <ShieldCheck size={14} /> 100% Liberado
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* ===== Cards de Métricas ===== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

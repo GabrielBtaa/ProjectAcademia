@@ -29,8 +29,7 @@ const PAGES = {
 function AppContent() {
   const { user, loading } = useAuth();
   const [needsSetup, setNeedsSetup] = useState(false);
-  const [setupLoading, setSetupLoading] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+  const [authView, setAuthView] = useState('landing'); // 'landing' | 'login' | 'register'
   const [billing, setBilling] = useState(null);
 
   // Estado da navegação e sidebar mobile
@@ -38,16 +37,16 @@ function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [buscaGlobal, setBuscaGlobal] = useState('');
 
-  // Verificar hash da URL para mostrar registro
+  // Verificar hash da URL para direcionar tela
   useEffect(() => {
     const checkRoute = () => {
       const hash = window.location.hash;
       const path = window.location.pathname;
 
       if (hash === '#register' || path === '/register') {
-        setShowRegister(true);
-      } else {
-        setShowRegister(false);
+        setAuthView('register');
+      } else if (hash === '#login' || path === '/login') {
+        setAuthView('login');
       }
     };
 

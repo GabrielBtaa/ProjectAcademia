@@ -240,15 +240,29 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
           )}
         </div>
 
-        {/* Informações do usuário e logout */}
+        {/* Informações do usuário, tipo de conta e logout */}
         <div className="flex items-center gap-2 ml-2 pl-2 border-l" style={{ borderColor: isLight ? '#cbd5e1' : '#4b5563' }}>
-          <div className="hidden sm:flex items-center gap-2">
+          
+          {/* Badge Tipo de Conta */}
+          {user?.role === 'admin' ? (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+              👑 Admin
+            </span>
+          ) : (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+              ⚡ Teste Grátis: {user?.trialEndsAt ? Math.max(0, Math.ceil((new Date(user.trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24))) : 30}d restantes
+            </span>
+          )}
+
+          <div className="hidden sm:flex items-center gap-2 ml-1">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
               <User size={16} className="text-white" />
             </div>
             <div className="hidden lg:block">
               <p className="text-sm font-medium" style={{ color: textHeading }}>{user?.nome}</p>
-              <p className="text-xs capitalize" style={{ color: textSub }}>{user?.role}</p>
+              <p className="text-xs capitalize" style={{ color: textSub }}>
+                {user?.role === 'admin' ? 'Administrador' : 'Conta Teste'}
+              </p>
             </div>
           </div>
           <button
