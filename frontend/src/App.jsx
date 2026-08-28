@@ -123,8 +123,10 @@ function AppContent() {
   }
 
   // Bloqueia o app se a conta não tiver assinatura ativa (admin sempre passa)
-  if (billing && !billing.isAdmin && billing.subscriptionStatus !== 'active') {
-    return <Assinatura />;
+  if (billing && !billing.isAdmin) {
+    const trialAtivo = billing.subscriptionStatus === 'trial' && billing.trialEndsAt && new Date(billing.trialEndsAt) > new Date();
+    const liberado = billing.subscriptionStatus === 'active' || trialAtivo;
+    if (!liberado) return <Assinatura />;
   }
 
   // Mostrar setup se não houver planos

@@ -251,6 +251,7 @@ app.post('/api/auth/register', async (req, res) => {
         subscriptionStatus: 'trial',
         subscriptionTier: 'pro',
         maxAlunos: 9999,
+        trialEndsAt,
       }
     });
 
@@ -352,7 +353,16 @@ async function requireActiveSubscription(req, res, next) {
       req.currentUser = user;
       return next();
     }
-    return res.status(402).json({ error: 'Assinatura inativa. Escolha um plano para continuar.', code: 'SUBSCRIPTION_REQUIRED' });
+    if (user.subscriptionStatus === 'trial') {
+      const aindaValido = user.trialEndsAt && new Date(user.trialEndsAt) > new Date();
+      if (aindaValido) {
+        req.currentUser = user;
+        return next();
+      }
+      // Trial expirou: marca como inativo pra não checar de novo toda hora
+      await prisma.user.update({ where: { id: user.id }, data: { subscriptionStatus: 'inactive' } });
+    }
+    return res.status(402).json({ error: 'Seu período de teste acabou. Escolha um plano para continuar.', code: 'SUBSCRIPTION_REQUIRED' });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao verificar assinatura' });
@@ -757,11 +767,13 @@ const PRICE_IDS = {
 app.get('/api/billing/status', authenticateToken, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+  const trialExpirado = user.subscriptionStatus === 'trial' && (!user.trialEndsAt || new Date(user.trialEndsAt) <= new Date());
   res.json({
-    subscriptionStatus: user.subscriptionStatus,
+    subscriptionStatus: trialExpirado ? 'inactive' : user.subscriptionStatus,
     subscriptionTier: user.subscriptionTier,
     maxAlunos: user.maxAlunos,
     isAdmin: user.role === 'admin',
+    trialEndsAt: user.trialEndsAt,
   });
 });
 
@@ -842,7 +854,26 @@ app.post('/api/billing/webhook', async (req, res) => {
   }
 });
 
-// ===== Automação de Notificações via WhatsApp =====
+// ===== Automação de Notificações via WhatsApp (Evolution API) =====
+async function enviarWhatsApp(numero, texto) {
+  const url = process.env.EVOLUTION_API_URL;
+  const apiKey = process.env.EVOLUTION_API_KEY;
+  const instancia = process.env.EVOLUTION_INSTANCE;
+  if (!url || !apiKey || !instancia) {
+    throw new Error('Evolution API não configurada (faltam variáveis de ambiente)');
+  }
+  const resp = await fetch(`${url.replace(/\/$/, '')}/message/sendText/${instancia}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: apiKey },
+    body: JSON.stringify({ number: numero, text: texto }),
+  });
+  if (!resp.ok) {
+    const corpo = await resp.text().catch(() => '');
+    throw new Error(`Evolution API respondeu ${resp.status}: ${corpo}`);
+  }
+  return resp.json().catch(() => ({}));
+}
+
 const whatsappStore = new Map();
 
 app.get('/api/whatsapp/config', authenticateToken, (req, res) => {
@@ -880,47 +911,55 @@ app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
-    const em5Dias = new Date();
-    em5Dias.setDate(em5Dias.getDate() + 5);
-    em5Dias.setHours(0, 0, 0, 0);
-
     const logsExecucao = [];
     let contador5Dias = 0;
     let contadorVencidos = 0;
 
-    alunos.forEach(aluno => {
-      if (!aluno.dataVencimento) return;
+    for (const aluno of alunos) {
+      if (!aluno.dataVencimento || !aluno.whatsapp) continue;
       const venc = new Date(aluno.dataVencimento);
       venc.setHours(0, 0, 0, 0);
-
       const diffDias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+
       let tipoMsg = null;
+      if (diffDias === 5) tipoMsg = '5dias';
+      else if (diffDias <= 0) tipoMsg = 'vencido';
+      if (!tipoMsg) continue;
 
-      if (diffDias === 5) {
-        tipoMsg = '5dias';
-        contador5Dias++;
-      } else if (diffDias <= 0 || aluno.status === 'inadimplente') {
-        tipoMsg = 'vencido';
-        contadorVencidos++;
-      }
+      const dataStr = venc.toLocaleDateString('pt-BR');
+      const nomeAcademia = config.nomeAcademia || 'sua academia';
+      const chavePix = config.chavePix || '[Solicitar PIX]';
+      const modelo = tipoMsg === '5dias'
+        ? (config.msg5Dias || 'Olá, {NOME_ALUNO}! Passando para lembrar que seu plano na {NOME_ACADEMIA} vence em 5 dias (dia {DATA_VENCIMENTO}). Chave PIX: {CHAVE_PIX}.')
+        : (config.msgVencido || 'Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} venceu em {DATA_VENCIMENTO}. Chave PIX: {CHAVE_PIX}.');
 
-      if (tipoMsg) {
-        const dataStr = venc.toLocaleDateString('pt-BR');
-        logsExecucao.push({
-          id: Date.now() + Math.random(),
-          alunoId: aluno.id,
-          alunoNome: aluno.nome,
-          whatsapp: aluno.whatsapp || aluno.telefone,
-          tipo: tipoMsg,
-          dataVencimento: dataStr,
-          dataEnvio: new Date().toISOString(),
-          status: 'sucesso',
-          mensagem: tipoMsg === '5dias'
-            ? `Lembrete preventivo enviado (Vence em ${dataStr})`
-            : `Cobrança enviada (Vencido em ${dataStr})`,
-        });
+      const texto = modelo
+        .replace(/\{NOME_ALUNO\}/g, aluno.nome)
+        .replace(/\{NOME_ACADEMIA\}/g, nomeAcademia)
+        .replace(/\{DATA_VENCIMENTO\}/g, dataStr)
+        .replace(/\{CHAVE_PIX\}/g, chavePix);
+
+      const numeroLimpo = String(aluno.whatsapp).replace(/\D/g, '');
+      const numero = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
+
+      const logBase = {
+        id: Date.now() + Math.random(),
+        alunoId: aluno.id,
+        alunoNome: aluno.nome,
+        whatsapp: aluno.whatsapp,
+        tipo: tipoMsg,
+        dataVencimento: dataStr,
+        dataEnvio: new Date().toISOString(),
+      };
+
+      try {
+        await enviarWhatsApp(numero, texto);
+        logsExecucao.push({ ...logBase, status: 'sucesso', mensagem: tipoMsg === '5dias' ? `Lembrete enviado (vence ${dataStr})` : `Cobrança enviada (venceu ${dataStr})` });
+        if (tipoMsg === '5dias') contador5Dias++; else contadorVencidos++;
+      } catch (erroEnvio) {
+        logsExecucao.push({ ...logBase, status: 'erro', mensagem: erroEnvio.message });
       }
-    });
+    }
 
     const logsAnteriores = config.logs || [];
     const novosLogs = [...logsExecucao, ...logsAnteriores].slice(0, 50);
@@ -932,7 +971,7 @@ app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => 
       avisos5Dias: contador5Dias,
       vencidos: contadorVencidos,
       logs: logsExecucao,
-      mensagem: `Robô executado! ${logsExecucao.length} notificação(ões) enviada(s) automaticamente.`
+      mensagem: `${logsExecucao.filter(l => l.status === 'sucesso').length} mensagem(ns) enviada(s), ${logsExecucao.filter(l => l.status === 'erro').length} com erro.`
     });
   } catch (err) {
     console.error('Erro na automação do WhatsApp:', err);

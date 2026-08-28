@@ -208,12 +208,17 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         nome,
-        role: "usuario"
+        role: "usuario",
+        subscriptionStatus: "trial",
+        subscriptionTier: "pro",
+        maxAlunos: 9999,
+        trialEndsAt,
       }
     });
 
@@ -310,7 +315,15 @@ async function requireActiveSubscription(req, res, next) {
       req.currentUser = user;
       return next();
     }
-    return res.status(402).json({ error: "Assinatura inativa. Escolha um plano para continuar.", code: "SUBSCRIPTION_REQUIRED" });
+    if (user.subscriptionStatus === "trial") {
+      const aindaValido = user.trialEndsAt && new Date(user.trialEndsAt) > new Date();
+      if (aindaValido) {
+        req.currentUser = user;
+        return next();
+      }
+      await prisma.user.update({ where: { id: user.id }, data: { subscriptionStatus: "inactive" } });
+    }
+    return res.status(402).json({ error: "Seu período de teste acabou. Escolha um plano para continuar.", code: "SUBSCRIPTION_REQUIRED" });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Erro ao verificar assinatura" });
@@ -665,11 +678,13 @@ const PRICE_IDS = {
 app.get("/api/billing/status", authenticateToken, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+  const trialExpirado = user.subscriptionStatus === "trial" && (!user.trialEndsAt || new Date(user.trialEndsAt) <= new Date());
   res.json({
-    subscriptionStatus: user.subscriptionStatus,
+    subscriptionStatus: trialExpirado ? "inactive" : user.subscriptionStatus,
     subscriptionTier: user.subscriptionTier,
     maxAlunos: user.maxAlunos,
     isAdmin: user.role === "admin",
+    trialEndsAt: user.trialEndsAt,
   });
 });
 
