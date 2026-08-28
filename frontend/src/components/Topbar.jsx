@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Menu, Search, LogOut, User, AlertTriangle, Clock, CreditCard, Sun, Moon } from 'lucide-react';
+import { Bell, Menu, Search, LogOut, User, AlertTriangle, Clock, CreditCard, Sun, Moon, UserCog, Headset } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useViewMode } from '../contexts/ViewModeContext';
 import { apiFetch } from '../lib/api';
 
 const ICONE_TIPO = {
@@ -23,6 +24,7 @@ const ICONE_TIPO = {
 export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { viewMode, toggleViewMode } = useViewMode();
   const isLight = theme === 'light';
   const [notificacoes, setNotificacoes] = useState([]);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -158,6 +160,19 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
             aria-label="Buscar aluno por nome, CPF ou WhatsApp"
           />
         </form>
+
+        {/* Alternância Admin / Recepcionista (mesma conta, restringe a UI) */}
+        <button
+          onClick={toggleViewMode}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200"
+          style={{ color: 'var(--icon-btn-color)', background: 'var(--icon-btn-bg)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--icon-btn-hover-bg)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'var(--icon-btn-bg)'}
+          title="Alternar entre modo Admin e Recepcionista"
+        >
+          {viewMode === 'admin' ? <UserCog size={15} /> : <Headset size={15} />}
+          {viewMode === 'admin' ? 'Admin' : 'Recepcionista'}
+        </button>
 
         {/* Botão de alternância Modo Claro / Escuro */}
         <button

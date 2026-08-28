@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ViewModeProvider, useViewMode } from './contexts/ViewModeContext';
 import { apiFetch } from './lib/api';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -34,6 +35,12 @@ function AppContent() {
 
   // Estado da navegação e sidebar mobile
   const [activePage, setActivePage] = useState('dashboard');
+  const { isRecepcionista } = useViewMode();
+
+  // Se estiver em modo recepcionista e a página atual for Configurações, volta pro Dashboard
+  useEffect(() => {
+    if (isRecepcionista && activePage === 'configuracoes') setActivePage('dashboard');
+  }, [isRecepcionista, activePage]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [buscaGlobal, setBuscaGlobal] = useState('');
 
@@ -185,9 +192,11 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ViewModeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ViewModeProvider>
     </ThemeProvider>
   );
 }

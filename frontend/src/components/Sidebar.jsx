@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useViewMode } from '../contexts/ViewModeContext';
 
 // Itens de navegação da sidebar
 const NAV_ITEMS = [
@@ -43,8 +44,10 @@ function getSiglaUsuario(nome) {
 export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
+  const { isRecepcionista } = useViewMode();
   const isLight = theme === 'light';
   const [nomeAcademia, setNomeAcademia] = useState(getNomeAcademia);
+  const navItems = isRecepcionista ? NAV_ITEMS.filter(i => i.id !== 'configuracoes') : NAV_ITEMS;
 
   useEffect(() => {
     const updateNome = () => setNomeAcademia(getNomeAcademia());
@@ -124,7 +127,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
             Menu Principal
           </p>
           <ul className="space-y-1">
-            {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+            {navItems.map(({ id, label, icon: Icon }) => {
               const isActive = activePage === id;
               return (
                 <li key={id}>

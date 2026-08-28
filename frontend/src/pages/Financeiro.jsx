@@ -13,6 +13,7 @@ import {
   PackagePlus,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { useViewMode } from '../contexts/ViewModeContext';
 
 // ===== Sub-componente: Modal de Plano =====
 function PlanoModal({ plano, onClose, onSave }) {
@@ -202,6 +203,7 @@ function PagamentoModal({ alunos, planos, onClose, onSave }) {
  * Gestão de planos + registro de pagamentos com histórico.
  */
 export default function Financeiro() {
+  const { isRecepcionista } = useViewMode();
   const [planos, setPlanos] = useState([]);
   const [alunos, setAlunos] = useState([]);
   const [pagamentos, setPagamentos] = useState([]);
@@ -340,11 +342,14 @@ export default function Financeiro() {
     if (!window.confirm('Excluir este plano?')) return;
     try {
       const response = await apiFetch((`/api/planos/${id}`), { method: 'DELETE' });
-      if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Erro ${response.status} ao excluir plano`);
+      }
       setPlanos(prev => prev.filter(p => p.id !== id));
     } catch (deleteError) {
       console.error('Erro ao excluir plano:', deleteError);
-      setError('Não foi possível excluir o plano');
+      setError(deleteError.message || 'Não foi possível excluir o plano');
     }
   };
 
@@ -427,13 +432,15 @@ export default function Financeiro() {
                   >
                     <Edit2 size={12} />
                   </button>
-                  <button
-                    onClick={() => handleExcluirPlano(plano.id)}
-                    className="p-1 rounded-lg"
-                    style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  {!isRecepcionista && (
+                    <button
+                      onClick={() => handleExcluirPlano(plano.id)}
+                      className="p-1 rounded-lg"
+                      style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </div>
               </div>
               <p className="text-2xl font-bold" style={{ color: '#34d399' }}>

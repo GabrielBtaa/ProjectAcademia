@@ -186,6 +186,43 @@ export default function Dashboard() {
     }));
   }, [alunos]);
 
+  // Novos alunos cadastrados por mês (últimos 6 meses)
+  const novosAlunosPorMes = useMemo(() => {
+    const hoje = new Date();
+    const meses = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push({ ano: d.getFullYear(), mes: d.getMonth(), label: MESES_ABREV[d.getMonth()] });
+    }
+    const contagem = meses.map(m => ({ mes: m.label, novos: 0, ano: m.ano, mesIndex: m.mes }));
+    alunos.forEach(a => {
+      if (!a.dataCadastro) return;
+      const d = new Date(a.dataCadastro);
+      const item = contagem.find(c => c.ano === d.getFullYear() && c.mesIndex === d.getMonth());
+      if (item) item.novos += 1;
+    });
+    return contagem;
+  }, [alunos]);
+
+  // Receita por plano (soma de pagamentos confirmados, agrupado pelo plano do aluno)
+  const receitaPorPlano = useMemo(() => {
+    const totais = {};
+    pagamentos.forEach(p => {
+      if (p.status !== 'confirmado') return;
+      const nome = p.aluno?.plano?.nome || 'Sem plano';
+      totais[nome] = (totais[nome] || 0) + Number(p.valor);
+    });
+    return Object.entries(totais)
+      .map(([nome, valor], i) => ({ nome, valor, fill: CORES_PLANO[i % CORES_PLANO.length] }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [pagamentos]);
+
+  // Ticket médio: faturamento do mês dividido pelos alunos ativos
+  const ticketMedio = useMemo(() => {
+    if (!metricas.totalAtivos) return 0;
+    return metricas.faturamentoMes / metricas.totalAtivos;
+  }, [metricas.faturamentoMes, metricas.totalAtivos]);
+
   const fetchDashboardData = useCallback(async ({ showLoading = false } = {}) => {
       if (showLoading) setLoading(true);
       setError(null);
@@ -364,13 +401,13 @@ export default function Dashboard() {
           trendText="Mês atual"
         />
         <MetricCard
-          title="Frequência Ativa"
-          value={`${taxaFrequencia}%`}
-          subtitle={`${metricas.totalAtivos} de ${metricas.totalAlunos} alunos em dia`}
+          title="Ticket Médio"
+          value={`R$ ${ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          subtitle="Faturamento do mês ÷ alunos ativos"
           icon={Activity}
           gradient="linear-gradient(135deg, #7c3aed, #2563eb)"
           trend="up"
-          trendText="Frequência estimada"
+          trendText="Por aluno ativo"
         />
       </div>
 
@@ -459,55 +496,120 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ===== Distribuição de Alunos por Plano ===== */}
-      <div
-        className="rounded-xl p-5"
-        style={{
-          background: 'var(--surface-card)',
-          border: '1px solid var(--border-2)',
-        }}
-      >
-        <div className="mb-4">
-          <h3 className="font-semibold text-heading text-sm">Distribuição por Plano</h3>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Quantidade de alunos matriculados em cada plano</p>
-        </div>
-        {distribuicaoPorPlano.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 gap-2">
-            <Users size={36} style={{ color: 'var(--text-muted)' }} />
-            <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Nenhum aluno cadastrado ainda</p>
+      {/* ===== Distribuição por Plano / Novos Alunos / Receita por Plano ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div
+          className="rounded-xl p-5"
+          style={{
+            background: 'var(--surface-card)',
+            border: '1px solid var(--border-2)',
+          }}
+        >
+          <div className="mb-4">
+            <h3 className="font-semibold text-heading text-sm">Distribuição por Plano</h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Alunos matriculados por plano</p>
           </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <ResponsiveContainer width="100%" height={220} style={{ maxWidth: 260 }}>
-              <PieChart>
-                <Pie
-                  data={distribuicaoPorPlano}
-                  dataKey="quantidade"
-                  nameKey="nome"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={2}
-                >
-                  {distribuicaoPorPlano.map((entry, i) => (
-                    <Cell key={entry.nome} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip content={<PlanoTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex-1 w-full space-y-2">
-              {distribuicaoPorPlano.map(item => (
-                <div key={item.nome} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.fill }} />
-                    <span style={{ color: '#d1d5db' }}>{item.nome}</span>
-                  </div>
-                  <span className="font-semibold text-heading">{item.quantidade}</span>
-                </div>
-              ))}
+          {distribuicaoPorPlano.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <Users size={36} style={{ color: 'var(--text-muted)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Nenhum aluno cadastrado ainda</p>
             </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={distribuicaoPorPlano}
+                    dataKey="quantidade"
+                    nameKey="nome"
+                    innerRadius={48}
+                    outerRadius={75}
+                    paddingAngle={2}
+                  >
+                    {distribuicaoPorPlano.map((entry, i) => (
+                      <Cell key={entry.nome} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<PlanoTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="w-full space-y-2">
+                {distribuicaoPorPlano.map(item => (
+                  <div key={item.nome} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.fill }} />
+                      <span style={{ color: '#d1d5db' }}>{item.nome}</span>
+                    </div>
+                    <span className="font-semibold text-heading">{item.quantidade}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Novos Alunos por Mês */}
+        <div
+          className="rounded-xl p-5"
+          style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
+        >
+          <div className="mb-4">
+            <h3 className="font-semibold text-heading text-sm">Novos Alunos</h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Matrículas nos últimos 6 meses</p>
           </div>
-        )}
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={novosAlunosPorMes} barSize={22}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(55, 65, 81, 0.3)" vertical={false} />
+              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} allowDecimals={false} />
+              <Tooltip
+                content={({ active, payload, label }) => active && payload?.length ? (
+                  <div className="rounded-lg px-3 py-2 text-sm shadow-xl" style={{ background: '#1f2937', border: '1px solid rgba(55, 65, 81, 0.6)', color: 'white' }}>
+                    <p className="font-semibold">{label}</p>
+                    <p style={{ color: '#60a5fa' }}>{payload[0].value} novo(s) aluno(s)</p>
+                  </div>
+                ) : null}
+                cursor={{ fill: 'rgba(96, 165, 250, 0.08)' }}
+              />
+              <Bar dataKey="novos" fill="#60a5fa" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Receita por Plano */}
+        <div
+          className="rounded-xl p-5"
+          style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
+        >
+          <div className="mb-4">
+            <h3 className="font-semibold text-heading text-sm">Receita por Plano</h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Faturamento confirmado, por plano</p>
+          </div>
+          {receitaPorPlano.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <DollarSign size={36} style={{ color: 'var(--text-muted)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Sem pagamentos confirmados ainda</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {receitaPorPlano.map(item => {
+                const max = receitaPorPlano[0].valor || 1;
+                const pct = Math.round((item.valor / max) * 100);
+                return (
+                  <div key={item.nome}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span style={{ color: '#d1d5db' }}>{item.nome}</span>
+                      <span className="font-semibold text-heading">R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: item.fill }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ===== Atividade Recente de Pagamentos ===== */}

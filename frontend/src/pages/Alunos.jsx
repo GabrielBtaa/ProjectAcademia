@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { gerarLinkWhatsApp } from '../lib/whatsapp';
+import { useViewMode } from '../contexts/ViewModeContext';
 
 // ===== Constantes =====
 const ITENS_POR_PAGINA = 5;
@@ -213,7 +214,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
 }
 
 // ===== Sub-componente: Card de Aluno (Mobile) =====
-function AlunoCard({ aluno, onEdit, onDelete }) {
+function AlunoCard({ aluno, onEdit, onDelete, podeExcluir = true }) {
   const diasRestantes = () => {
     const hoje = new Date();
     const venc = new Date(aluno.dataVencimento + 'T12:00:00');
@@ -265,9 +266,11 @@ function AlunoCard({ aluno, onEdit, onDelete }) {
           <button onClick={() => onEdit(aluno)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#60a5fa' }}>
             <Edit2 size={14} />
           </button>
-          <button onClick={() => onDelete(aluno.id)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#f87171' }}>
-            <Trash2 size={14} />
-          </button>
+          {podeExcluir && (
+            <button onClick={() => onDelete(aluno.id)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#f87171' }}>
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -279,6 +282,7 @@ function AlunoCard({ aluno, onEdit, onDelete }) {
  * CRUD completo com busca, filtros, paginação e modal de cadastro/edição.
  */
 export default function Alunos({ searchTerm = '' }) {
+  const { isRecepcionista } = useViewMode();
   const [alunos, setAlunos] = useState([]);
   const [planos, setPlanos] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -616,14 +620,16 @@ export default function Alunos({ searchTerm = '' }) {
                         >
                           <Edit2 size={14} />
                         </button>
-                        <button
-                          onClick={() => handleExcluir(aluno.id)}
-                          className="p-1.5 rounded-lg transition-all"
-                          style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
-                          title="Excluir"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {!isRecepcionista && (
+                          <button
+                            onClick={() => handleExcluir(aluno.id)}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
+                            title="Excluir"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -643,7 +649,7 @@ export default function Alunos({ searchTerm = '' }) {
           </div>
         ) : (
           alunosPagina.map(aluno => (
-            <AlunoCard key={aluno.id} aluno={aluno} onEdit={handleEditar} onDelete={handleExcluir} />
+            <AlunoCard key={aluno.id} aluno={aluno} onEdit={handleEditar} onDelete={handleExcluir} podeExcluir={!isRecepcionista} />
           ))
         )}
       </div>
