@@ -13,6 +13,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
+import { apiFetch } from '../lib/api';
 
 // Itens de navegação da sidebar
 const NAV_ITEMS = [
@@ -21,17 +22,6 @@ const NAV_ITEMS = [
   { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
-
-function getNomeAcademia() {
-  try {
-    const salvo = localStorage.getItem('gymflow_dados_academia');
-    if (salvo) {
-      const parsed = JSON.parse(salvo);
-      if (parsed.nomeAcademia && parsed.nomeAcademia.trim()) return parsed.nomeAcademia.trim();
-    }
-  } catch {}
-  return 'GymFlow';
-}
 
 function getSiglaUsuario(nome) {
   if (!nome) return 'US';
@@ -46,13 +36,22 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose }) 
   const { user, logout } = useAuth();
   const { isRecepcionista } = useViewMode();
   const isLight = theme === 'light';
-  const [nomeAcademia, setNomeAcademia] = useState(getNomeAcademia);
+  const [nomeAcademia, setNomeAcademia] = useState('GymFlow');
   const navItems = isRecepcionista ? NAV_ITEMS.filter(i => i.id !== 'configuracoes') : NAV_ITEMS;
 
   useEffect(() => {
-    const updateNome = () => setNomeAcademia(getNomeAcademia());
-    window.addEventListener('gymflow:settings-updated', updateNome);
-    return () => window.removeEventListener('gymflow:settings-updated', updateNome);
+    const carregarNome = () => {
+      apiFetch('/api/conta/academia')
+        .then(res => res.json())
+        .then(data => {
+          if (data.nomeAcademia && data.nomeAcademia.trim()) setNomeAcademia(data.nomeAcademia.trim());
+          else setNomeAcademia('GymFlow');
+        })
+        .catch(() => {});
+    };
+    carregarNome();
+    window.addEventListener('gymflow:settings-updated', carregarNome);
+    return () => window.removeEventListener('gymflow:settings-updated', carregarNome);
   }, []);
 
   const handleNavClick = (pageId) => {

@@ -9,7 +9,7 @@ import {
   Lock,
   CheckCircle2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiFetch } from '../lib/api';
 
@@ -53,15 +53,8 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-const CHAVE_ACADEMIA = 'gymflow_dados_academia';
-
-function carregarDadosAcademia() {
-  try {
-    const salvo = localStorage.getItem(CHAVE_ACADEMIA);
-    return salvo ? JSON.parse(salvo) : { nomeAcademia: '', cnpj: '', telefone: '', endereco: '' };
-  } catch {
-    return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '' };
-  }
+function dadosAcademiaVazios() {
+  return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '' };
 }
 
 /**
@@ -76,9 +69,22 @@ export default function Configuracoes() {
     notifVencimentos: true,
     backupAuto: true,
   });
-  const [dadosAcademia, setDadosAcademia] = useState(carregarDadosAcademia);
+  const [dadosAcademia, setDadosAcademia] = useState(dadosAcademiaVazios);
   const [salvandoAcademia, setSalvandoAcademia] = useState(false);
   const [academiaSalva, setAcademiaSalva] = useState(false);
+
+  // Carrega os dados da academia da conta logada (não é mais por navegador)
+  useEffect(() => {
+    apiFetch('/api/conta/academia')
+      .then(res => res.json())
+      .then(data => setDadosAcademia({
+        nomeAcademia: data.nomeAcademia || '',
+        cnpj: data.cnpjAcademia || '',
+        telefone: data.telefoneAcademia || '',
+        endereco: data.enderecoAcademia || '',
+      }))
+      .catch(() => {});
+  }, []);
 
   const [senhaForm, setSenhaForm] = useState({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
   const [senhaLoading, setSenhaLoading] = useState(false);
@@ -88,15 +94,26 @@ export default function Configuracoes() {
   const toggle = (key) => setConfig(prev => ({ ...prev, [key]: !prev[key] }));
   const updateAcademia = (key, value) => setDadosAcademia(prev => ({ ...prev, [key]: value }));
 
-  const handleSalvarAcademia = () => {
+  const handleSalvarAcademia = async () => {
     setSalvandoAcademia(true);
-    localStorage.setItem(CHAVE_ACADEMIA, JSON.stringify(dadosAcademia));
-    window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
-    setTimeout(() => {
-      setSalvandoAcademia(false);
+    try {
+      await apiFetch('/api/conta/academia', {
+        method: 'PUT',
+        body: JSON.stringify({
+          nomeAcademia: dadosAcademia.nomeAcademia,
+          cnpjAcademia: dadosAcademia.cnpj,
+          telefoneAcademia: dadosAcademia.telefone,
+          enderecoAcademia: dadosAcademia.endereco,
+        }),
+      });
+      window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
       setAcademiaSalva(true);
       setTimeout(() => setAcademiaSalva(false), 2500);
-    }, 300);
+    } catch {
+      // erro silencioso; poderia exibir mensagem se necessário
+    } finally {
+      setSalvandoAcademia(false);
+    }
   };
 
   const handleAlterarSenha = async (e) => {

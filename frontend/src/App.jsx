@@ -12,6 +12,7 @@ import Configuracoes from './pages/Configuracoes';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Setup from './pages/Setup';
+import Assinatura from './pages/Assinatura';
 import LandingPage from './pages/LandingPage';
 
 const backend = import.meta.env.VITE_BACKEND;

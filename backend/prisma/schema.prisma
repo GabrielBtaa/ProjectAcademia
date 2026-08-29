@@ -33,6 +33,10 @@ model User {
   subscriptionTier     String? // starter | pro | business
   maxAlunos            Int      @default(0)
   trialEndsAt          DateTime?
+  nomeAcademia         String?
+  cnpjAcademia         String?
+  telefoneAcademia     String?
+  enderecoAcademia     String?
 }
 
 model Plano {

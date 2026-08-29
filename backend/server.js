@@ -675,6 +675,41 @@ const PRICE_IDS = {
   business: process.env.STRIPE_PRICE_BUSINESS,
 };
 
+app.get("/api/conta/academia", authenticateToken, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+  res.json({
+    nomeAcademia: user.nomeAcademia || "",
+    cnpjAcademia: user.cnpjAcademia || "",
+    telefoneAcademia: user.telefoneAcademia || "",
+    enderecoAcademia: user.enderecoAcademia || "",
+  });
+});
+
+app.put("/api/conta/academia", authenticateToken, async (req, res) => {
+  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia } = req.body || {};
+  try {
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        nomeAcademia: nomeAcademia ?? undefined,
+        cnpjAcademia: cnpjAcademia ?? undefined,
+        telefoneAcademia: telefoneAcademia ?? undefined,
+        enderecoAcademia: enderecoAcademia ?? undefined,
+      },
+    });
+    res.json({
+      nomeAcademia: updated.nomeAcademia || "",
+      cnpjAcademia: updated.cnpjAcademia || "",
+      telefoneAcademia: updated.telefoneAcademia || "",
+      enderecoAcademia: updated.enderecoAcademia || "",
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Erro ao salvar dados da academia" });
+  }
+});
+
 app.get("/api/billing/status", authenticateToken, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
