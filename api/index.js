@@ -773,11 +773,15 @@ app.get('/api/conta/academia', authenticateToken, async (req, res) => {
     cnpjAcademia: user.cnpjAcademia || '',
     telefoneAcademia: user.telefoneAcademia || '',
     enderecoAcademia: user.enderecoAcademia || '',
+    chavePix: user.chavePix || '',
+    whatsappMsg5Dias: user.whatsappMsg5Dias || '',
+    whatsappMsgVencido: user.whatsappMsgVencido || '',
+    whatsappAutoEnviar: user.whatsappAutoEnviar,
   });
 });
 
 app.put('/api/conta/academia', authenticateToken, async (req, res) => {
-  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia } = req.body || {};
+  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar } = req.body || {};
   try {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
@@ -786,6 +790,10 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
         cnpjAcademia: cnpjAcademia ?? undefined,
         telefoneAcademia: telefoneAcademia ?? undefined,
         enderecoAcademia: enderecoAcademia ?? undefined,
+        chavePix: chavePix ?? undefined,
+        whatsappMsg5Dias: whatsappMsg5Dias ?? undefined,
+        whatsappMsgVencido: whatsappMsgVencido ?? undefined,
+        whatsappAutoEnviar: typeof whatsappAutoEnviar === 'boolean' ? whatsappAutoEnviar : undefined,
       },
     });
     res.json({
@@ -793,6 +801,10 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
       cnpjAcademia: updated.cnpjAcademia || '',
       telefoneAcademia: updated.telefoneAcademia || '',
       enderecoAcademia: updated.enderecoAcademia || '',
+      chavePix: updated.chavePix || '',
+      whatsappMsg5Dias: updated.whatsappMsg5Dias || '',
+      whatsappMsgVencido: updated.whatsappMsgVencido || '',
+      whatsappAutoEnviar: updated.whatsappAutoEnviar,
     });
   } catch (e) {
     console.error(e);
@@ -938,7 +950,13 @@ app.post('/api/whatsapp/config', authenticateToken, (req, res) => {
 app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const config = whatsappStore.get(userId) || {};
+    const usuario = await prisma.user.findUnique({ where: { id: userId } });
+    const config = {
+      nomeAcademia: usuario?.nomeAcademia,
+      chavePix: usuario?.chavePix,
+      msg5Dias: usuario?.whatsappMsg5Dias,
+      msgVencido: usuario?.whatsappMsgVencido,
+    };
     const alunos = await prisma.aluno.findMany({
       where: { ownerId: userId },
       include: { plano: true },

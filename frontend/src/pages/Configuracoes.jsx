@@ -54,7 +54,7 @@ function Toggle({ checked, onChange }) {
 }
 
 function dadosAcademiaVazios() {
-  return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '' };
+  return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '', chavePix: '' };
 }
 
 /**
@@ -82,6 +82,7 @@ export default function Configuracoes() {
         cnpj: data.cnpjAcademia || '',
         telefone: data.telefoneAcademia || '',
         endereco: data.enderecoAcademia || '',
+        chavePix: data.chavePix || '',
       }))
       .catch(() => {});
   }, []);
@@ -104,6 +105,7 @@ export default function Configuracoes() {
           cnpjAcademia: dadosAcademia.cnpj,
           telefoneAcademia: dadosAcademia.telefone,
           enderecoAcademia: dadosAcademia.endereco,
+          chavePix: dadosAcademia.chavePix,
         }),
       });
       window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
@@ -220,6 +222,15 @@ export default function Configuracoes() {
               onChange={e => updateAcademia('chavePix', e.target.value)}
             />
           </div>
+
+          <button
+            className="btn-primary flex items-center gap-2"
+            onClick={handleSalvarAcademia}
+            disabled={salvandoAcademia}
+          >
+            {academiaSalva ? <CheckCircle2 size={14} /> : <Save size={14} />}
+            {salvandoAcademia ? 'Salvando...' : academiaSalva ? 'Salvo!' : 'Salvar Chave PIX'}
+          </button>
 
           <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/50 space-y-2">
             <div className="flex items-center justify-between">

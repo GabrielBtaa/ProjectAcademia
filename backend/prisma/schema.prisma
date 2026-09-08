@@ -37,6 +37,10 @@ model User {
   cnpjAcademia         String?
   telefoneAcademia     String?
   enderecoAcademia     String?
+  chavePix             String?
+  whatsappMsg5Dias     String?  @db.Text
+  whatsappMsgVencido   String?  @db.Text
+  whatsappAutoEnviar   Boolean  @default(false)
 }
 
 model Plano {
