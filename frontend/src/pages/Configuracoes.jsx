@@ -83,6 +83,8 @@ export default function Configuracoes() {
         telefone: data.telefoneAcademia || '',
         endereco: data.enderecoAcademia || '',
         chavePix: data.chavePix || '',
+        whatsappMsg5Dias: data.whatsappMsg5Dias || '',
+        whatsappMsgVencido: data.whatsappMsgVencido || '',
       }))
       .catch(() => {});
   }, []);
@@ -106,6 +108,8 @@ export default function Configuracoes() {
           telefoneAcademia: dadosAcademia.telefone,
           enderecoAcademia: dadosAcademia.endereco,
           chavePix: dadosAcademia.chavePix,
+          whatsappMsg5Dias: dadosAcademia.whatsappMsg5Dias,
+          whatsappMsgVencido: dadosAcademia.whatsappMsgVencido,
         }),
       });
       window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
@@ -223,14 +227,45 @@ export default function Configuracoes() {
             />
           </div>
 
-          <button
-            className="btn-primary flex items-center gap-2"
-            onClick={handleSalvarAcademia}
-            disabled={salvandoAcademia}
-          >
-            {academiaSalva ? <CheckCircle2 size={14} /> : <Save size={14} />}
-            {salvandoAcademia ? 'Salvando...' : academiaSalva ? 'Salvo!' : 'Salvar Chave PIX'}
-          </button>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              Mensagem — 5 dias antes de vencer
+            </label>
+            <textarea
+              className="input-field"
+              rows={3}
+              placeholder="Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} vence em 5 dias (dia {DATA_VENCIMENTO}). Chave PIX: {CHAVE_PIX}."
+              value={dadosAcademia.whatsappMsg5Dias || ''}
+              onChange={e => updateAcademia('whatsappMsg5Dias', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              Mensagem — mensalidade vencida
+            </label>
+            <textarea
+              className="input-field"
+              rows={3}
+              placeholder="Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} venceu em {DATA_VENCIMENTO}. Chave PIX: {CHAVE_PIX}."
+              value={dadosAcademia.whatsappMsgVencido || ''}
+              onChange={e => updateAcademia('whatsappMsgVencido', e.target.value)}
+            />
+          </div>
+          <p className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+            Use as variáveis: <code>{'{NOME_ALUNO}'}</code>, <code>{'{NOME_ACADEMIA}'}</code>, <code>{'{DATA_VENCIMENTO}'}</code>, <code>{'{CHAVE_PIX}'}</code>. Deixe em branco pra usar a mensagem padrão.
+          </p>
+
+          <div className="flex items-center gap-3">
+            <button
+              className="btn-primary flex items-center gap-2"
+              onClick={handleSalvarAcademia}
+              disabled={salvandoAcademia}
+            >
+              {academiaSalva ? <CheckCircle2 size={14} /> : <Save size={14} />}
+              {salvandoAcademia ? 'Salvando...' : academiaSalva ? 'Salvo!' : 'Salvar Mensagens e PIX'}
+            </button>
+          </div>
 
           <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/50 space-y-2">
             <div className="flex items-center justify-between">
