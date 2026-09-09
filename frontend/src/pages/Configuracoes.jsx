@@ -9,7 +9,7 @@ import {
   Lock,
   CheckCircle2,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiFetch } from '../lib/api';
 
@@ -53,6 +53,54 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+const VARIAVEIS_MENSAGEM = [
+  { token: '{NOME_ALUNO}', label: 'Nome do aluno' },
+  { token: '{NOME_ACADEMIA}', label: 'Nome da academia' },
+  { token: '{DATA_VENCIMENTO}', label: 'Data de vencimento' },
+  { token: '{CHAVE_PIX}', label: 'Chave PIX' },
+];
+
+/**
+ * Fileira de botões que insere a variável clicada na posição do cursor
+ * dentro do textarea indicado por textareaRef, sem precisar digitar chaves.
+ */
+function VariaveisMensagem({ textareaRef, value, onChange }) {
+  const inserirVariavel = (token) => {
+    const el = textareaRef.current;
+    if (!el) {
+      onChange((value || '') + token);
+      return;
+    }
+    const inicio = el.selectionStart ?? value.length;
+    const fim = el.selectionEnd ?? value.length;
+    const novoValor = (value || '').slice(0, inicio) + token + (value || '').slice(fim);
+    onChange(novoValor);
+    // Devolve o foco e posiciona o cursor logo depois da variável inserida
+    requestAnimationFrame(() => {
+      el.focus();
+      const novaPos = inicio + token.length;
+      el.setSelectionRange(novaPos, novaPos);
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mb-2">
+      {VARIAVEIS_MENSAGEM.map(v => (
+        <button
+          key={v.token}
+          type="button"
+          onClick={() => inserirVariavel(v.token)}
+          className="text-[0.68rem] px-2 py-1 rounded-md font-medium transition-colors"
+          style={{ background: 'var(--surface-alt-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }}
+          title={`Inserir ${v.label}`}
+        >
+          + {v.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function dadosAcademiaVazios() {
   return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '', chavePix: '' };
 }
@@ -70,6 +118,8 @@ export default function Configuracoes() {
     backupAuto: true,
   });
   const [dadosAcademia, setDadosAcademia] = useState(dadosAcademiaVazios);
+  const msg5DiasRef = useRef(null);
+  const msgVencidoRef = useRef(null);
   const [salvandoAcademia, setSalvandoAcademia] = useState(false);
   const [academiaSalva, setAcademiaSalva] = useState(false);
 
@@ -231,7 +281,13 @@ export default function Configuracoes() {
             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Mensagem — 5 dias antes de vencer
             </label>
+            <VariaveisMensagem
+              textareaRef={msg5DiasRef}
+              value={dadosAcademia.whatsappMsg5Dias || ''}
+              onChange={v => updateAcademia('whatsappMsg5Dias', v)}
+            />
             <textarea
+              ref={msg5DiasRef}
               className="input-field"
               rows={3}
               placeholder="Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} vence em 5 dias (dia {DATA_VENCIMENTO}). Chave PIX: {CHAVE_PIX}."
@@ -244,7 +300,13 @@ export default function Configuracoes() {
             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Mensagem — mensalidade vencida
             </label>
+            <VariaveisMensagem
+              textareaRef={msgVencidoRef}
+              value={dadosAcademia.whatsappMsgVencido || ''}
+              onChange={v => updateAcademia('whatsappMsgVencido', v)}
+            />
             <textarea
+              ref={msgVencidoRef}
               className="input-field"
               rows={3}
               placeholder="Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} venceu em {DATA_VENCIMENTO}. Chave PIX: {CHAVE_PIX}."
@@ -253,7 +315,7 @@ export default function Configuracoes() {
             />
           </div>
           <p className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
-            Use as variáveis: <code>{'{NOME_ALUNO}'}</code>, <code>{'{NOME_ACADEMIA}'}</code>, <code>{'{DATA_VENCIMENTO}'}</code>, <code>{'{CHAVE_PIX}'}</code>. Deixe em branco pra usar a mensagem padrão.
+            Clique nos botões acima do campo pra inserir a variável na posição do cursor. Deixe em branco pra usar a mensagem padrão.
           </p>
 
           <div className="flex items-center gap-3">
