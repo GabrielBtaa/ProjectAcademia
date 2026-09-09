@@ -947,78 +947,85 @@ app.post('/api/whatsapp/config', authenticateToken, (req, res) => {
   res.json({ ok: true, config: updated });
 });
 
+// Roda o disparo de notificações (5 dias antes + vencidos) para um usuário específico.
+// Usado tanto pelo botão manual quanto pelo robô automático diário (cron).
+async function dispararNotificacoesParaUsuario(userId) {
+  const usuario = await prisma.user.findUnique({ where: { id: userId } });
+  const config = {
+    nomeAcademia: usuario?.nomeAcademia,
+    chavePix: usuario?.chavePix,
+    msg5Dias: usuario?.whatsappMsg5Dias,
+    msgVencido: usuario?.whatsappMsgVencido,
+  };
+  const alunos = await prisma.aluno.findMany({
+    where: { ownerId: userId },
+    include: { plano: true },
+  });
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const logsExecucao = [];
+  let contador5Dias = 0;
+  let contadorVencidos = 0;
+
+  for (const aluno of alunos) {
+    if (!aluno.dataVencimento || !aluno.whatsapp) continue;
+    const venc = new Date(aluno.dataVencimento);
+    venc.setHours(0, 0, 0, 0);
+    const diffDias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+
+    let tipoMsg = null;
+    if (diffDias === 5) tipoMsg = '5dias';
+    else if (diffDias <= 0) tipoMsg = 'vencido';
+    if (!tipoMsg) continue;
+
+    const dataStr = venc.toLocaleDateString('pt-BR');
+    const nomeAcademia = config.nomeAcademia || 'sua academia';
+    const chavePix = config.chavePix || '[Solicitar PIX]';
+    const modelo = tipoMsg === '5dias'
+      ? (config.msg5Dias || 'Olá, {NOME_ALUNO}! Passando para lembrar que seu plano na {NOME_ACADEMIA} vence em 5 dias (dia {DATA_VENCIMENTO}). Chave PIX: {CHAVE_PIX}.')
+      : (config.msgVencido || 'Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} venceu em {DATA_VENCIMENTO}. Chave PIX: {CHAVE_PIX}.');
+
+    const texto = modelo
+      .replace(/\{NOME_ALUNO\}/g, aluno.nome)
+      .replace(/\{NOME_ACADEMIA\}/g, nomeAcademia)
+      .replace(/\{DATA_VENCIMENTO\}/g, dataStr)
+      .replace(/\{CHAVE_PIX\}/g, chavePix);
+
+    const numeroLimpo = String(aluno.whatsapp).replace(/\D/g, '');
+    const numero = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
+
+    const logBase = {
+      id: Date.now() + Math.random(),
+      alunoId: aluno.id,
+      alunoNome: aluno.nome,
+      whatsapp: aluno.whatsapp,
+      tipo: tipoMsg,
+      dataVencimento: dataStr,
+      dataEnvio: new Date().toISOString(),
+    };
+
+    try {
+      await enviarWhatsApp(numero, texto);
+      logsExecucao.push({ ...logBase, status: 'sucesso', mensagem: tipoMsg === '5dias' ? `Lembrete enviado (vence ${dataStr})` : `Cobrança enviada (venceu ${dataStr})` });
+      if (tipoMsg === '5dias') contador5Dias++; else contadorVencidos++;
+    } catch (erroEnvio) {
+      logsExecucao.push({ ...logBase, status: 'erro', mensagem: erroEnvio.message });
+    }
+  }
+
+  const antigo = whatsappStore.get(userId) || {};
+  const logsAnteriores = antigo.logs || [];
+  const novosLogs = [...logsExecucao, ...logsAnteriores].slice(0, 50);
+  whatsappStore.set(userId, { ...antigo, logs: novosLogs, ultimoDisparo: new Date().toISOString() });
+
+  return { logsExecucao, contador5Dias, contadorVencidos };
+}
+
 app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const usuario = await prisma.user.findUnique({ where: { id: userId } });
-    const config = {
-      nomeAcademia: usuario?.nomeAcademia,
-      chavePix: usuario?.chavePix,
-      msg5Dias: usuario?.whatsappMsg5Dias,
-      msgVencido: usuario?.whatsappMsgVencido,
-    };
-    const alunos = await prisma.aluno.findMany({
-      where: { ownerId: userId },
-      include: { plano: true },
-    });
-
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    const logsExecucao = [];
-    let contador5Dias = 0;
-    let contadorVencidos = 0;
-
-    for (const aluno of alunos) {
-      if (!aluno.dataVencimento || !aluno.whatsapp) continue;
-      const venc = new Date(aluno.dataVencimento);
-      venc.setHours(0, 0, 0, 0);
-      const diffDias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
-
-      let tipoMsg = null;
-      if (diffDias === 5) tipoMsg = '5dias';
-      else if (diffDias <= 0) tipoMsg = 'vencido';
-      if (!tipoMsg) continue;
-
-      const dataStr = venc.toLocaleDateString('pt-BR');
-      const nomeAcademia = config.nomeAcademia || 'sua academia';
-      const chavePix = config.chavePix || '[Solicitar PIX]';
-      const modelo = tipoMsg === '5dias'
-        ? (config.msg5Dias || 'Olá, {NOME_ALUNO}! Passando para lembrar que seu plano na {NOME_ACADEMIA} vence em 5 dias (dia {DATA_VENCIMENTO}). Chave PIX: {CHAVE_PIX}.')
-        : (config.msgVencido || 'Olá, {NOME_ALUNO}! Sua mensalidade na {NOME_ACADEMIA} venceu em {DATA_VENCIMENTO}. Chave PIX: {CHAVE_PIX}.');
-
-      const texto = modelo
-        .replace(/\{NOME_ALUNO\}/g, aluno.nome)
-        .replace(/\{NOME_ACADEMIA\}/g, nomeAcademia)
-        .replace(/\{DATA_VENCIMENTO\}/g, dataStr)
-        .replace(/\{CHAVE_PIX\}/g, chavePix);
-
-      const numeroLimpo = String(aluno.whatsapp).replace(/\D/g, '');
-      const numero = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
-
-      const logBase = {
-        id: Date.now() + Math.random(),
-        alunoId: aluno.id,
-        alunoNome: aluno.nome,
-        whatsapp: aluno.whatsapp,
-        tipo: tipoMsg,
-        dataVencimento: dataStr,
-        dataEnvio: new Date().toISOString(),
-      };
-
-      try {
-        await enviarWhatsApp(numero, texto);
-        logsExecucao.push({ ...logBase, status: 'sucesso', mensagem: tipoMsg === '5dias' ? `Lembrete enviado (vence ${dataStr})` : `Cobrança enviada (venceu ${dataStr})` });
-        if (tipoMsg === '5dias') contador5Dias++; else contadorVencidos++;
-      } catch (erroEnvio) {
-        logsExecucao.push({ ...logBase, status: 'erro', mensagem: erroEnvio.message });
-      }
-    }
-
-    const logsAnteriores = config.logs || [];
-    const novosLogs = [...logsExecucao, ...logsAnteriores].slice(0, 50);
-    whatsappStore.set(userId, { ...config, logs: novosLogs, ultimoDisparo: new Date().toISOString() });
-
+    const { logsExecucao, contador5Dias, contadorVencidos } = await dispararNotificacoesParaUsuario(req.user.id);
     res.json({
       ok: true,
       totalProcessados: logsExecucao.length,
@@ -1030,6 +1037,31 @@ app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => 
   } catch (err) {
     console.error('Erro na automação do WhatsApp:', err);
     res.status(500).json({ error: 'Falha ao executar automação do WhatsApp' });
+  }
+});
+
+// Robô automático diário — chamado pelo Vercel Cron (não pelo usuário).
+// Protegido por CRON_SECRET: só a própria Vercel (com o header certo) pode chamar.
+app.get('/api/cron/whatsapp-diario', async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+  try {
+    const usuarios = await prisma.user.findMany({ where: { whatsappAutoEnviar: true } });
+    const resultados = [];
+    for (const u of usuarios) {
+      try {
+        const r = await dispararNotificacoesParaUsuario(u.id);
+        resultados.push({ userId: u.id, enviados: r.logsExecucao.filter(l => l.status === 'sucesso').length });
+      } catch (e) {
+        resultados.push({ userId: u.id, erro: e.message });
+      }
+    }
+    res.json({ ok: true, contasProcessadas: usuarios.length, resultados });
+  } catch (err) {
+    console.error('Erro no robô diário:', err);
+    res.status(500).json({ error: 'Falha no robô diário' });
   }
 });
 

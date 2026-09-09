@@ -135,6 +135,7 @@ export default function Configuracoes() {
         chavePix: data.chavePix || '',
         whatsappMsg5Dias: data.whatsappMsg5Dias || '',
         whatsappMsgVencido: data.whatsappMsgVencido || '',
+        whatsappAutoEnviar: !!data.whatsappAutoEnviar,
       }))
       .catch(() => {});
   }, []);
@@ -147,7 +148,7 @@ export default function Configuracoes() {
   const toggle = (key) => setConfig(prev => ({ ...prev, [key]: !prev[key] }));
   const updateAcademia = (key, value) => setDadosAcademia(prev => ({ ...prev, [key]: value }));
 
-  const handleSalvarAcademia = async () => {
+  const handleSalvarAcademia = async (overrides = {}) => {
     setSalvandoAcademia(true);
     try {
       await apiFetch('/api/conta/academia', {
@@ -160,6 +161,8 @@ export default function Configuracoes() {
           chavePix: dadosAcademia.chavePix,
           whatsappMsg5Dias: dadosAcademia.whatsappMsg5Dias,
           whatsappMsgVencido: dadosAcademia.whatsappMsgVencido,
+          whatsappAutoEnviar: dadosAcademia.whatsappAutoEnviar,
+          ...overrides,
         }),
       });
       window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
@@ -170,6 +173,12 @@ export default function Configuracoes() {
     } finally {
       setSalvandoAcademia(false);
     }
+  };
+
+  const handleToggleAutoEnviar = () => {
+    const novoValor = !dadosAcademia.whatsappAutoEnviar;
+    updateAcademia('whatsappAutoEnviar', novoValor);
+    handleSalvarAcademia({ whatsappAutoEnviar: novoValor });
   };
 
   const handleAlterarSenha = async (e) => {
@@ -335,7 +344,7 @@ export default function Configuracoes() {
                 <p className="text-xs font-bold text-white">Envio Automático Diário</p>
                 <p className="text-[0.7rem] text-gray-400">O servidor enviará os lembretes de 5 dias antes e cobranças de vencido automaticamente às 09:00</p>
               </div>
-              <Toggle checked={config.notificacoesEmpurrar} onChange={() => toggle('notificacoesEmpurrar')} />
+              <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
             </div>
           </div>
 
