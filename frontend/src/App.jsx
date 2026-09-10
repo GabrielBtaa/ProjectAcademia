@@ -9,8 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Alunos from './pages/Alunos';
 import Financeiro from './pages/Financeiro';
 import Configuracoes from './pages/Configuracoes';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import AuthCard from './pages/AuthCard';
 import Setup from './pages/Setup';
 import Assinatura from './pages/Assinatura';
 import LandingPage from './pages/LandingPage';
@@ -116,11 +115,8 @@ function AppContent() {
 
   // Mostrar Landing Page, Login ou Registro se não estiver autenticado
   if (!user) {
-    if (authView === 'login') {
-      return <Login />;
-    }
-    if (authView === 'register') {
-      return <Register />;
+    if (authView === 'login' || authView === 'register') {
+      return <AuthCard modoInicial={authView === 'register' ? 'cadastro' : 'login'} />;
     }
     return (
       <LandingPage
