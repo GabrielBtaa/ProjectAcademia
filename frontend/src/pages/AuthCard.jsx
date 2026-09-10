@@ -13,9 +13,10 @@ const MODELOS_NEGOCIO = [
 ];
 
 /**
- * Card único de autenticação com painéis que deslizam entre Login e Cadastro,
- * inspirado num design de referência (checkbox + CSS sibling selectors),
- * adaptado pra React com estado em vez de :checked.
+ * Card único de autenticação com painéis que deslizam entre Login e Cadastro.
+ * Os 4 painéis (hero-login, form-login, hero-cadastro, form-cadastro) ficam
+ * SEMPRE montados no DOM — só a posição/opacidade muda via CSS — pra permitir
+ * a animação de deslizar de verdade (igual ao truque do checkbox de referência).
  */
 export default function AuthCard({ modoInicial = 'login' }) {
   const [modoCadastro, setModoCadastro] = useState(modoInicial === 'cadastro');
@@ -26,40 +27,79 @@ export default function AuthCard({ modoInicial = 'login' }) {
       style={{ background: 'radial-gradient(circle at 30% 20%, #0f1f3d 0%, #080c18 60%)' }}
     >
       <style>{`
-        .authcard { position: relative; width: 100%; max-width: 880px; min-height: 560px; border-radius: 28px; overflow: hidden; background: #0d1528; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 100px -30px rgba(0,0,0,0.7); display: flex; }
-        .authcard-hero, .authcard-form { flex: 1 1 50%; min-width: 0; transition: transform 0.6s cubic-bezier(.65,0,.35,1), opacity 0.5s ease; }
-        .authcard-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 40px; position: relative; color: #f2f4f8; }
-        .authcard-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 0%, rgba(34,227,154,0.18), transparent 60%), linear-gradient(160deg, #0f1f3d, #080c18); }
-        .authcard-hero > * { position: relative; z-index: 1; }
-        .authcard-form { padding: 44px 40px; overflow-y: auto; max-height: 640px; }
-        .authcard.is-cadastro .authcard-hero { order: 2; }
-        .authcard.is-cadastro .authcard-form { order: 1; }
-        @media (max-width: 720px) {
-          .authcard { flex-direction: column; min-height: 0; }
-          .authcard.is-cadastro .authcard-hero { order: 0; }
-          .authcard.is-cadastro .authcard-form { order: 1; }
-          .authcard-form { max-height: none; }
-        }
+        .authcard { position: relative; width: 100%; max-width: 880px; height: 620px; border-radius: 28px; overflow: hidden; background: #0d1528; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 100px -30px rgba(0,0,0,0.7); }
+        .authpane { position: absolute; top: 0; width: 50%; height: 100%; transition: transform 0.65s cubic-bezier(.65,0,.35,1), opacity 0.45s ease; }
+        .authpane.is-hidden { opacity: 0; pointer-events: none; }
+        .authpane.is-visible { opacity: 1; }
+        .authpane-hero-login { left: 0; }
+        .authpane-form-login { left: 50%; }
+        .authpane-hero-cadastro { left: 50%; }
+        .authpane-form-cadastro { left: 0; }
+        .authcard.is-cadastro .authpane-hero-login { transform: translateX(-100%); }
+        .authcard.is-cadastro .authpane-form-login { transform: translateX(100%); }
+        .authcard:not(.is-cadastro) .authpane-hero-cadastro { transform: translateX(100%); }
+        .authcard:not(.is-cadastro) .authpane-form-cadastro { transform: translateX(-100%); }
+        .authpane-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 40px; color: #f2f4f8; }
+        .authpane-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 0%, rgba(34,227,154,0.18), transparent 60%), linear-gradient(160deg, #0f1f3d, #080c18); z-index: -1; }
+        .authpane-form { padding: 40px 40px; overflow-y: auto; }
         .authcard-toggle-btn { padding: 11px 30px; border-radius: 100px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; border: 1px solid rgba(255,255,255,0.5); background: transparent; color: #fff; cursor: pointer; transition: all 0.2s; }
         .authcard-toggle-btn:hover { background: #22e39a; border-color: #22e39a; color: #080c18; }
         .authcard-input { width: 100%; padding: 11px 14px; border-radius: 10px; font-size: 0.85rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #f2f4f8; transition: border-color 0.2s; }
         .authcard-input::placeholder { color: #5b6270; }
         .authcard-input:focus { outline: none; border-color: #22e39a; }
         .authcard-label { display: block; font-size: 0.72rem; font-weight: 600; color: #8890a4; margin-bottom: 5px; }
+
+        @media (max-width: 720px) {
+          .authcard { height: auto; min-height: 0; }
+          .authpane { position: relative; width: 100%; height: auto; transform: none !important; transition: opacity 0.35s ease; }
+          .authpane.is-hidden { display: none; }
+          .authpane-form { max-height: none; overflow: visible; }
+        }
       `}</style>
 
       <div className={`authcard ${modoCadastro ? 'is-cadastro' : ''}`}>
-        {modoCadastro ? (
-          <CadastroPainel onVoltarLogin={() => setModoCadastro(false)} />
-        ) : (
-          <LoginPainel onIrCadastro={() => setModoCadastro(true)} />
-        )}
+        <div className={`authpane authpane-hero-login authpane-hero ${modoCadastro ? 'is-hidden' : 'is-visible'}`}>
+          <HeroLogin onIrCadastro={() => setModoCadastro(true)} />
+        </div>
+        <div className={`authpane authpane-form-login authpane-form ${modoCadastro ? 'is-hidden' : 'is-visible'}`}>
+          <FormLogin onIrCadastro={() => setModoCadastro(true)} />
+        </div>
+        <div className={`authpane authpane-hero-cadastro authpane-hero ${modoCadastro ? 'is-visible' : 'is-hidden'}`}>
+          <HeroCadastro onVoltarLogin={() => setModoCadastro(false)} />
+        </div>
+        <div className={`authpane authpane-form-cadastro authpane-form ${modoCadastro ? 'is-visible' : 'is-hidden'}`}>
+          <FormCadastro onVoltarLogin={() => setModoCadastro(false)} />
+        </div>
       </div>
     </div>
   );
 }
 
-function LoginPainel({ onIrCadastro }) {
+function HeroLogin({ onIrCadastro }) {
+  return (
+    <>
+      <h2 className="text-2xl font-bold mb-2">Olá!</h2>
+      <p className="text-sm mb-7" style={{ color: '#b8bfcc', maxWidth: 260 }}>
+        Ainda não tem uma academia cadastrada no GymFlow? Comece agora, é grátis por 30 dias.
+      </p>
+      <button type="button" onClick={onIrCadastro} className="authcard-toggle-btn">CRIAR CONTA</button>
+    </>
+  );
+}
+
+function HeroCadastro({ onVoltarLogin }) {
+  return (
+    <>
+      <h2 className="text-2xl font-bold mb-2">Comece agora</h2>
+      <p className="text-sm mb-7" style={{ color: '#b8bfcc', maxWidth: 260 }}>
+        30 dias grátis, sem cartão de crédito. Já tem uma conta no GymFlow?
+      </p>
+      <button type="button" onClick={onVoltarLogin} className="authcard-toggle-btn">FAZER LOGIN</button>
+    </>
+  );
+}
+
+function FormLogin({ onIrCadastro }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,78 +116,42 @@ function LoginPainel({ onIrCadastro }) {
   };
 
   return (
-    <>
-      <div className="authcard-form flex flex-col justify-center">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #22e39a, #0a9e6c)' }}>
-          <Dumbbell size={22} color="#080c18" />
+    <div className="flex flex-col justify-center h-full">
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #22e39a, #0a9e6c)' }}>
+        <Dumbbell size={22} color="#080c18" />
+      </div>
+      <h2 className="text-2xl font-bold text-white mb-1">Bem-vindo de volta</h2>
+      <p className="text-sm mb-6" style={{ color: '#8890a4' }}>Entre com suas credenciais pra acessar o GymFlow.</p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="authcard-label">Email</label>
+          <input type="email" required className="authcard-input" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-1">Bem-vindo de volta</h2>
-        <p className="text-sm mb-6" style={{ color: '#8890a4' }}>Entre com suas credenciais pra acessar o GymFlow.</p>
+        <div>
+          <label className="authcard-label">Senha</label>
+          <input type="password" required className="authcard-input" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="authcard-label">Email</label>
-            <input
-              type="email"
-              required
-              className="authcard-input"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
+        {error && (
+          <div className="p-3 rounded-lg text-xs font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+            {error}
           </div>
-          <div>
-            <label className="authcard-label">Senha</label>
-            <input
-              type="password"
-              required
-              className="authcard-input"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-          </div>
+        )}
 
-          {error && (
-            <div className="p-3 rounded-lg text-xs font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
-            style={{ background: '#22e39a', color: '#080c18' }}
-          >
-            {loading ? 'Entrando...' : (<>Entrar <ArrowRight size={16} /></>)}
-          </button>
-        </form>
-
-        <button
-          type="button"
-          onClick={onIrCadastro}
-          className="mt-5 text-xs text-center transition-colors"
-          style={{ color: '#8890a4' }}
-        >
-          Não tem conta? <span style={{ color: '#22e39a', fontWeight: 600 }}>Criar conta grátis</span>
+        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#22e39a', color: '#080c18' }}>
+          {loading ? 'Entrando...' : (<>Entrar <ArrowRight size={16} /></>)}
         </button>
-      </div>
+      </form>
 
-      <div className="authcard-hero">
-        <h2 className="text-2xl font-bold mb-2">Olá!</h2>
-        <p className="text-sm mb-7" style={{ color: '#b8bfcc', maxWidth: 260 }}>
-          Ainda não tem uma academia cadastrada no GymFlow? Comece agora, é grátis por 30 dias.
-        </p>
-        <button type="button" onClick={onIrCadastro} className="authcard-toggle-btn">
-          CRIAR CONTA
-        </button>
-      </div>
-    </>
+      <button type="button" onClick={onIrCadastro} className="mt-5 text-xs text-center transition-colors md:hidden" style={{ color: '#8890a4' }}>
+        Não tem conta? <span style={{ color: '#22e39a', fontWeight: 600 }}>Criar conta grátis</span>
+      </button>
+    </div>
   );
 }
 
-function CadastroPainel({ onVoltarLogin }) {
+function FormCadastro({ onVoltarLogin }) {
   const [form, setForm] = useState({
     nome: '', email: '', confirmarEmail: '', celular: '',
     modeloNegocio: 'Academia Tradicional', password: '', confirmarSenha: '',
@@ -196,93 +200,80 @@ function CadastroPainel({ onVoltarLogin }) {
 
   return (
     <>
-      <div className="authcard-hero">
-        <h2 className="text-2xl font-bold mb-2">Comece agora</h2>
-        <p className="text-sm mb-7" style={{ color: '#b8bfcc', maxWidth: 260 }}>
-          30 dias grátis, sem cartão de crédito. Já tem uma conta no GymFlow?
-        </p>
-        <button type="button" onClick={onVoltarLogin} className="authcard-toggle-btn">
-          FAZER LOGIN
-        </button>
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-4" style={{ background: 'rgba(34,227,154,0.1)', border: '1px solid rgba(34,227,154,0.3)', color: '#22e39a' }}>
+        <Sparkles size={12} />
+        Teste Grátis de 30 Dias
       </div>
+      <h2 className="text-xl font-bold text-white mb-1">Crie sua conta</h2>
+      <p className="text-sm mb-5" style={{ color: '#8890a4' }}>Menos de 1 minuto pra liberar acesso total.</p>
 
-      <div className="authcard-form">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-4" style={{ background: 'rgba(34,227,154,0.1)', border: '1px solid rgba(34,227,154,0.3)', color: '#22e39a' }}>
-          <Sparkles size={12} />
-          Teste Grátis de 30 Dias
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        <div>
+          <label className="authcard-label">Nome Completo *</label>
+          <input className="authcard-input" required placeholder="Ex: Gabriel Silva" value={form.nome} onChange={e => handleChange('nome', e.target.value)} />
         </div>
-        <h2 className="text-xl font-bold text-white mb-1">Crie sua conta</h2>
-        <p className="text-sm mb-5" style={{ color: '#8890a4' }}>Menos de 1 minuto pra liberar acesso total.</p>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="authcard-label">Nome Completo *</label>
-            <input className="authcard-input" required placeholder="Ex: Gabriel Silva" value={form.nome} onChange={e => handleChange('nome', e.target.value)} />
+            <label className="authcard-label">Seu Email *</label>
+            <input type="email" className="authcard-input" required placeholder="seu@email.com" value={form.email} onChange={e => handleChange('email', e.target.value)} />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="authcard-label">Seu Email *</label>
-              <input type="email" className="authcard-input" required placeholder="seu@email.com" value={form.email} onChange={e => handleChange('email', e.target.value)} />
-            </div>
-            <div>
-              <label className="authcard-label">Confirmar Email *</label>
-              <input type="email" className="authcard-input" required placeholder="Repita seu email" value={form.confirmarEmail} onChange={e => handleChange('confirmarEmail', e.target.value)} />
-            </div>
+          <div>
+            <label className="authcard-label">Confirmar Email *</label>
+            <input type="email" className="authcard-input" required placeholder="Repita seu email" value={form.confirmarEmail} onChange={e => handleChange('confirmarEmail', e.target.value)} />
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="authcard-label">Celular / WhatsApp *</label>
-              <input type="tel" className="authcard-input" required placeholder="(11) 99999-9999" value={form.celular} onChange={e => handleChange('celular', e.target.value)} />
-            </div>
-            <div>
-              <label className="authcard-label">Modelo de Negócio *</label>
-              <select className="authcard-input" value={form.modeloNegocio} onChange={e => handleChange('modeloNegocio', e.target.value)}>
-                {MODELOS_NEGOCIO.map(opt => <option key={opt.value} value={opt.value} style={{ background: '#0d1528' }}>{opt.label}</option>)}
-              </select>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="authcard-label">Celular / WhatsApp *</label>
+            <input type="tel" className="authcard-input" required placeholder="(11) 99999-9999" value={form.celular} onChange={e => handleChange('celular', e.target.value)} />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="authcard-label">Senha de Acesso *</label>
-              <input type="password" className="authcard-input" required placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => handleChange('password', e.target.value)} />
-            </div>
-            <div>
-              <label className="authcard-label">Confirmar Senha *</label>
-              <input type="password" className="authcard-input" required placeholder="Repita sua senha" value={form.confirmarSenha} onChange={e => handleChange('confirmarSenha', e.target.value)} />
-            </div>
+          <div>
+            <label className="authcard-label">Modelo de Negócio *</label>
+            <select className="authcard-input" value={form.modeloNegocio} onChange={e => handleChange('modeloNegocio', e.target.value)}>
+              {MODELOS_NEGOCIO.map(opt => <option key={opt.value} value={opt.value} style={{ background: '#0d1528' }}>{opt.label}</option>)}
+            </select>
           </div>
+        </div>
 
-          {error && (
-            <div className="p-3 rounded-lg text-xs font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="p-3 rounded-lg text-xs font-medium flex items-center gap-2" style={{ background: 'rgba(34,227,154,0.1)', border: '1px solid rgba(34,227,154,0.3)', color: '#22e39a' }}>
-              <CheckCircle2 size={16} />
-              Cadastro concluído! Liberando seus 30 dias de teste grátis...
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
-            style={{ background: '#22e39a', color: '#080c18' }}
-          >
-            {loading ? 'Criando sua conta...' : (<>Começar Meus 30 Dias Grátis <ArrowRight size={16} /></>)}
-          </button>
-
-          <div className="pt-1 flex items-center justify-around text-[0.68rem]" style={{ color: '#8890a4' }}>
-            <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: '#22e39a' }} /> Sem cartão</span>
-            <span className="flex items-center gap-1"><CheckCircle2 size={12} style={{ color: '#60a5fa' }} /> Acesso total</span>
-            <span className="flex items-center gap-1"><Sparkles size={12} style={{ color: '#fbbf24' }} /> Cancele quando quiser</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="authcard-label">Senha de Acesso *</label>
+            <input type="password" className="authcard-input" required placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => handleChange('password', e.target.value)} />
           </div>
-        </form>
-      </div>
+          <div>
+            <label className="authcard-label">Confirmar Senha *</label>
+            <input type="password" className="authcard-input" required placeholder="Repita sua senha" value={form.confirmarSenha} onChange={e => handleChange('confirmarSenha', e.target.value)} />
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-lg text-xs font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="p-3 rounded-lg text-xs font-medium flex items-center gap-2" style={{ background: 'rgba(34,227,154,0.1)', border: '1px solid rgba(34,227,154,0.3)', color: '#22e39a' }}>
+            <CheckCircle2 size={16} />
+            Cadastro concluído! Liberando seus 30 dias de teste grátis...
+          </div>
+        )}
+
+        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#22e39a', color: '#080c18' }}>
+          {loading ? 'Criando sua conta...' : (<>Começar Meus 30 Dias Grátis <ArrowRight size={16} /></>)}
+        </button>
+
+        <div className="pt-1 flex items-center justify-around text-[0.68rem]" style={{ color: '#8890a4' }}>
+          <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: '#22e39a' }} /> Sem cartão</span>
+          <span className="flex items-center gap-1"><CheckCircle2 size={12} style={{ color: '#60a5fa' }} /> Acesso total</span>
+          <span className="flex items-center gap-1"><Sparkles size={12} style={{ color: '#fbbf24' }} /> Cancele quando quiser</span>
+        </div>
+
+        <button type="button" onClick={onVoltarLogin} className="w-full text-xs text-center transition-colors md:hidden" style={{ color: '#8890a4' }}>
+          Já tem conta? <span style={{ color: '#22e39a', fontWeight: 600 }}>Fazer login</span>
+        </button>
+      </form>
     </>
   );
 }
