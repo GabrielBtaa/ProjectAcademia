@@ -42,6 +42,7 @@ function AppContent() {
     if (isRecepcionista && activePage === 'configuracoes') setActivePage('dashboard');
   }, [isRecepcionista, activePage]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarColapsada, setSidebarColapsada] = useState(() => localStorage.getItem('gymflow_sidebar_colapsada') === '1');
   const [buscaGlobal, setBuscaGlobal] = useState('');
 
   // Verificar hash da URL para direcionar tela
@@ -156,10 +157,18 @@ function AppContent() {
         setActivePage={setActivePage}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        colapsada={sidebarColapsada}
+        onToggleColapsada={() => setSidebarColapsada(prev => {
+          localStorage.setItem('gymflow_sidebar_colapsada', prev ? '0' : '1');
+          return !prev;
+        })}
       />
 
       {/* ===== Área Principal (direita) ===== */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden transition-[margin] duration-300 ${sidebarColapsada ? 'lg:ml-[92px]' : 'lg:ml-[272px]'}`}
+      >
+
         {/* Topbar fixa no topo */}
         <Topbar
           title={currentPage.title}
