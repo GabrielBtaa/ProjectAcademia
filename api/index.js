@@ -777,11 +777,22 @@ app.get('/api/conta/academia', authenticateToken, async (req, res) => {
     whatsappMsg5Dias: user.whatsappMsg5Dias || '',
     whatsappMsgVencido: user.whatsappMsgVencido || '',
     whatsappAutoEnviar: user.whatsappAutoEnviar,
+    whatsappHoraEnvio: typeof user.whatsappHoraEnvio === 'number' ? user.whatsappHoraEnvio : 9,
   });
 });
 
 app.put('/api/conta/academia', authenticateToken, async (req, res) => {
-  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar } = req.body || {};
+  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar, whatsappHoraEnvio } = req.body || {};
+
+  let horaEnvioValida;
+  if (whatsappHoraEnvio !== undefined) {
+    const h = Number(whatsappHoraEnvio);
+    if (!Number.isInteger(h) || h < 0 || h > 23) {
+      return res.status(400).json({ error: 'whatsappHoraEnvio deve ser um número inteiro entre 0 e 23' });
+    }
+    horaEnvioValida = h;
+  }
+
   try {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
@@ -794,6 +805,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
         whatsappMsg5Dias: whatsappMsg5Dias ?? undefined,
         whatsappMsgVencido: whatsappMsgVencido ?? undefined,
         whatsappAutoEnviar: typeof whatsappAutoEnviar === 'boolean' ? whatsappAutoEnviar : undefined,
+        whatsappHoraEnvio: horaEnvioValida,
       },
     });
     res.json({
@@ -805,6 +817,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
       whatsappMsg5Dias: updated.whatsappMsg5Dias || '',
       whatsappMsgVencido: updated.whatsappMsgVencido || '',
       whatsappAutoEnviar: updated.whatsappAutoEnviar,
+      whatsappHoraEnvio: updated.whatsappHoraEnvio,
     });
   } catch (e) {
     console.error(e);
@@ -1048,7 +1061,18 @@ app.get('/api/cron/whatsapp-diario', async (req, res) => {
     return res.status(401).json({ error: 'Não autorizado' });
   }
   try {
-    const usuarios = await prisma.user.findMany({ where: { whatsappAutoEnviar: true } });
+    // O cron da Vercel roda 1x por hora (ver vercel.json). Aqui filtramos só os
+    // usuários cujo horário configurado (whatsappHoraEnvio, fuso de Brasília)
+    // bate com a hora atual, para respeitar o horário escolhido por cada academia.
+    const OFFSET_BRASILIA = 3; // UTC-3
+    const horaAtualBrasilia = (new Date().getUTCHours() - OFFSET_BRASILIA + 24) % 24;
+
+    const todosAutoEnviar = await prisma.user.findMany({ where: { whatsappAutoEnviar: true } });
+    const usuarios = todosAutoEnviar.filter(u => {
+      const horaConfigurada = typeof u.whatsappHoraEnvio === 'number' ? u.whatsappHoraEnvio : 9;
+      return horaConfigurada === horaAtualBrasilia;
+    });
+
     const resultados = [];
     for (const u of usuarios) {
       try {
@@ -1058,7 +1082,7 @@ app.get('/api/cron/whatsapp-diario', async (req, res) => {
         resultados.push({ userId: u.id, erro: e.message });
       }
     }
-    res.json({ ok: true, contasProcessadas: usuarios.length, resultados });
+    res.json({ ok: true, horaAtualBrasilia, contasElegiveis: usuarios.length, contasComAutoEnvio: todosAutoEnviar.length, resultados });
   } catch (err) {
     console.error('Erro no robô diário:', err);
     res.status(500).json({ error: 'Falha no robô diário' });

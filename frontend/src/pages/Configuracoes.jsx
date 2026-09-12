@@ -136,6 +136,7 @@ export default function Configuracoes() {
         whatsappMsg5Dias: data.whatsappMsg5Dias || '',
         whatsappMsgVencido: data.whatsappMsgVencido || '',
         whatsappAutoEnviar: !!data.whatsappAutoEnviar,
+        whatsappHoraEnvio: typeof data.whatsappHoraEnvio === 'number' ? data.whatsappHoraEnvio : 9,
       }))
       .catch(() => {});
   }, []);
@@ -162,6 +163,7 @@ export default function Configuracoes() {
           whatsappMsg5Dias: dadosAcademia.whatsappMsg5Dias,
           whatsappMsgVencido: dadosAcademia.whatsappMsgVencido,
           whatsappAutoEnviar: dadosAcademia.whatsappAutoEnviar,
+          whatsappHoraEnvio: dadosAcademia.whatsappHoraEnvio,
           ...overrides,
         }),
       });
@@ -179,6 +181,12 @@ export default function Configuracoes() {
     const novoValor = !dadosAcademia.whatsappAutoEnviar;
     updateAcademia('whatsappAutoEnviar', novoValor);
     handleSalvarAcademia({ whatsappAutoEnviar: novoValor });
+  };
+
+  const handleChangeHoraEnvio = (e) => {
+    const novaHora = Number(e.target.value);
+    updateAcademia('whatsappHoraEnvio', novaHora);
+    handleSalvarAcademia({ whatsappHoraEnvio: novaHora });
   };
 
   const handleAlterarSenha = async (e) => {
@@ -338,14 +346,35 @@ export default function Configuracoes() {
             </button>
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/50 space-y-2">
+          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/50 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white">Envio Automático Diário</p>
-                <p className="text-[0.7rem] text-gray-400">O servidor enviará os lembretes de 5 dias antes e cobranças de vencido automaticamente às 09:00</p>
+                <p className="text-[0.7rem] text-gray-400">
+                  O servidor enviará os lembretes de 5 dias antes e cobranças de vencido automaticamente às{' '}
+                  {String(dadosAcademia.whatsappHoraEnvio ?? 9).padStart(2, '0')}:00 (horário de Brasília)
+                </p>
               </div>
               <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
             </div>
+
+            {dadosAcademia.whatsappAutoEnviar && (
+              <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
+                <label htmlFor="horaEnvio" className="text-[0.7rem] text-gray-400">
+                  Horário do disparo:
+                </label>
+                <select
+                  id="horaEnvio"
+                  value={dadosAcademia.whatsappHoraEnvio ?? 9}
+                  onChange={handleChangeHoraEnvio}
+                  className="bg-slate-900/60 border border-slate-700/50 text-white text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 pt-2">
