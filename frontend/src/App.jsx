@@ -166,7 +166,7 @@ function AppContent() {
 
       {/* ===== Área Principal (direita) ===== */}
       <div
-        className={`flex-1 flex flex-col min-w-0 overflow-hidden transition-[margin] duration-300 ${sidebarColapsada ? 'lg:ml-[92px]' : 'lg:ml-[272px]'}`}
+        className={`app-content-shift ${sidebarColapsada ? 'is-collapsed' : 'is-expanded'} flex-1 flex flex-col min-w-0 overflow-hidden`}
       >
 
         {/* Topbar fixa no topo */}

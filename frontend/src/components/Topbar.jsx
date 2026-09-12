@@ -108,12 +108,12 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
 
   return (
     <header
-      className="flex items-center justify-between px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 z-30 transition-colors duration-300"
+      className="flex items-center justify-between px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 lg:top-4 lg:mx-4 lg:mb-0 z-30 lg:rounded-2xl lg:shadow-sm transition-colors duration-300"
       style={{
         background: bgHeader,
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: borderHeader,
+        border: borderHeader,
       }}
     >
       {/* Esquerda: Botão menu (mobile) + Título */}

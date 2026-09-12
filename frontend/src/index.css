@@ -123,6 +123,15 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Empurra o conteúdo principal pra abrir espaço pra sidebar flutuante (desktop) */
+.app-content-shift {
+  transition: margin-left 0.3s ease;
+}
+@media (min-width: 1024px) {
+  .app-content-shift.is-collapsed { margin-left: 92px; }
+  .app-content-shift.is-expanded { margin-left: 272px; }
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-page, var(--color-surface-950));
