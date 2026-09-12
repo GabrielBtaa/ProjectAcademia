@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import {
   Search,
   Plus,
@@ -18,7 +18,11 @@ import { gerarLinkWhatsApp } from '../lib/whatsapp';
 import { useViewMode } from '../contexts/ViewModeContext';
 
 // ===== Constantes =====
-const ITENS_POR_PAGINA = 5;
+// Altura aproximada de cada linha da tabela (px) — usada só como estimativa inicial,
+// antes de medirmos a altura real da primeira linha renderizada.
+const ALTURA_LINHA_ESTIMADA = 57;
+const ALTURA_RESERVADA_ABAIXO_TABELA = 130; // paginação + respiro inferior
+const MIN_ITENS_POR_PAGINA = 5;
 
 const STATUS_OPTIONS = [
   { value: 'todos', label: 'Todos' },
@@ -322,6 +326,36 @@ export default function Alunos({ searchTerm = '' }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [alunoEditando, setAlunoEditando] = useState(null);
 
+  // ===== Itens por página dinâmico =====
+  // Calcula quantas linhas cabem entre o topo da tabela e o fim da tela,
+  // recalculando sempre que a janela é redimensionada.
+  const tabelaWrapperRef = useRef(null);
+  const [itensPorPagina, setItensPorPagina] = useState(MIN_ITENS_POR_PAGINA);
+
+  useLayoutEffect(() => {
+    const recalcular = () => {
+      const wrapper = tabelaWrapperRef.current;
+      if (!wrapper) return;
+
+      const topoTabela = wrapper.getBoundingClientRect().top;
+      const primeiraLinha = wrapper.querySelector('tbody tr');
+      const alturaLinha = primeiraLinha
+        ? primeiraLinha.getBoundingClientRect().height
+        : ALTURA_LINHA_ESTIMADA;
+
+      const espacoDisponivel = window.innerHeight - topoTabela - ALTURA_RESERVADA_ABAIXO_TABELA;
+      const linhasQueCabem = Math.floor(espacoDisponivel / alturaLinha);
+
+      setItensPorPagina(Math.max(MIN_ITENS_POR_PAGINA, linhasQueCabem));
+    };
+
+    recalcular();
+    window.addEventListener('resize', recalcular);
+    return () => window.removeEventListener('resize', recalcular);
+    // Recalcula também quando a lista muda de tamanho (ex: após carregar dados)
+    // ou muda de página, pra ajustar caso a altura da linha varie.
+  }, [alunos.length, paginaAtual]);
+
   useEffect(() => {
     if (searchTerm) {
       setBusca(searchTerm);
@@ -354,11 +388,16 @@ export default function Alunos({ searchTerm = '' }) {
   }, [alunos, busca, filtroStatus]);
 
   // Paginação calculada
-  const totalPaginas = Math.max(1, Math.ceil(alunosFiltrados.length / ITENS_POR_PAGINA));
+  const totalPaginas = Math.max(1, Math.ceil(alunosFiltrados.length / itensPorPagina));
   const alunosPagina = alunosFiltrados.slice(
-    (paginaAtual - 1) * ITENS_POR_PAGINA,
-    paginaAtual * ITENS_POR_PAGINA
+    (paginaAtual - 1) * itensPorPagina,
+    paginaAtual * itensPorPagina
   );
+
+  // Se a tela mudar de tamanho e a página atual deixar de existir, volta pra última válida
+  useEffect(() => {
+    if (paginaAtual > totalPaginas) setPaginaAtual(totalPaginas);
+  }, [totalPaginas, paginaAtual]);
 
   // Reseta a paginação ao filtrar
   const handleBusca = (v) => { setBusca(v); setPaginaAtual(1); };
@@ -517,6 +556,7 @@ export default function Alunos({ searchTerm = '' }) {
 
       {/* ===== Tabela (Desktop) ===== */}
       <div
+        ref={tabelaWrapperRef}
         className="hidden md:block rounded-xl overflow-hidden"
         style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
       >
