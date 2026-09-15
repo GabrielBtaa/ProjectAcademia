@@ -1,0 +1,4 @@
+ALTER TABLE "User" ADD COLUMN "stripeCustomerId" TEXT;
+ALTER TABLE "User" ADD COLUMN "subscriptionStatus" TEXT NOT NULL DEFAULT 'inactive';
+ALTER TABLE "User" ADD COLUMN "subscriptionTier" TEXT;
+ALTER TABLE "User" ADD COLUMN "maxAlunos" INTEGER NOT NULL DEFAULT 0;

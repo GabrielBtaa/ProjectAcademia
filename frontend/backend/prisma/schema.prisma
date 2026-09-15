@@ -1,0 +1,93 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../node_modules/.prisma/client"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  usuario
+}
+
+enum StatusAluno {
+  ativo
+  inadimplente
+  inativo
+}
+
+model User {
+  id                   Int      @id @default(autoincrement())
+  email                String   @unique
+  password             String
+  nome                 String
+  role                 UserRole @default(usuario)
+  planos               Plano[]
+  alunos               Aluno[]
+  stripeCustomerId     String?
+  subscriptionStatus   String   @default("inactive") // inactive | trial | active | past_due | canceled
+  subscriptionTier     String? // starter | pro | business
+  maxAlunos            Int      @default(0)
+  trialEndsAt          DateTime?
+  nomeAcademia         String?
+  cnpjAcademia         String?
+  telefoneAcademia     String?
+  enderecoAcademia     String?
+  chavePix             String?
+  whatsappMsg5Dias     String?  @db.Text
+  whatsappMsgVencido   String?  @db.Text
+  whatsappAutoEnviar   Boolean  @default(false)
+  whatsappHoraEnvio    Int      @default(9)
+}
+
+model Plano {
+  id        Int     @id @default(autoincrement())
+  nome      String
+  duracao   Int
+  valor     Decimal @db.Decimal(10, 2)
+  descricao String?
+  ownerId   Int
+  owner     User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  alunos    Aluno[]
+}
+
+enum StatusPagamento {
+  pendente
+  confirmado
+  cancelado
+}
+
+model Pagamento {
+  id         Int             @id @default(autoincrement())
+  valor      Decimal         @db.Decimal(10, 2)
+  data       DateTime        @db.Date
+  status     StatusPagamento @default(pendente)
+  metodo     String          @default("PIX")
+  alunoId    Int
+  aluno      Aluno           @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model Aluno {
+  id             Int         @id @default(autoincrement())
+  nome           String
+  cpf            String
+  whatsapp       String
+  dataNascimento DateTime    @db.Date
+  dataVencimento DateTime    @db.Date
+  status         StatusAluno @default(ativo)
+  avatar         String?
+  dataCadastro   DateTime    @default(now())
+  planoId        Int
+  plano          Plano       @relation(fields: [planoId], references: [id], onDelete: Restrict)
+  ownerId        Int
+  owner          User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pagamentos     Pagamento[]
+
+  @@unique([cpf, ownerId])
+}
