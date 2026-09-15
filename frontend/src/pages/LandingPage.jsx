@@ -14,10 +14,15 @@ import {
   BarChart3,
   ChevronRight,
   Star,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function LandingPage({ onOpenLogin, onOpenRegister }) {
   const [activeFaq, setActiveFaq] = useState(null);
+  const { theme, toggleTheme } = useTheme();
+  const isLight = theme === 'light';
 
   const toggleFaq = (index) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -95,10 +100,10 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
   ];
 
   return (
-    <div className="min-h-screen font-sans text-gray-100" style={{ background: '#0a0f1e' }}>
+    <div className="min-h-screen font-sans" style={{ background: 'var(--bg-page)', color: 'var(--text-heading)' }}>
       
       {/* ===== Barra Superior / Navegação ===== */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl" style={{ background: 'rgba(10, 15, 30, 0.85)', borderBottom: '1px solid rgba(55, 65, 81, 0.4)' }}>
+      <header className="sticky top-0 z-50 backdrop-blur-xl" style={{ background: 'var(--surface-modal)', borderBottom: '1px solid var(--border-2)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
           {/* Logo */}
@@ -107,16 +112,31 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
               <Dumbbell size={20} color="white" />
             </div>
             <div>
-              <span className="font-bold text-lg text-white tracking-tight">GymFlow</span>
+              <span className="font-bold text-lg tracking-tight" style={{ color: 'var(--text-heading)' }}>GymFlow</span>
               <span className="text-[0.65rem] block text-blue-400 font-semibold tracking-wider uppercase">SaaS Fitness</span>
             </div>
           </div>
 
           {/* Links e Botões de Ação */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
+              className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-alt-1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span className="relative w-[18px] h-[18px] block">
+                <Sun size={18} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.25s, transform 0.25s', opacity: isLight ? 1 : 0, transform: isLight ? 'rotate(0deg) scale(1)' : 'rotate(-90deg) scale(0.5)' }} />
+                <Moon size={18} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.25s, transform 0.25s', opacity: isLight ? 0 : 1, transform: isLight ? 'rotate(90deg) scale(0.5)' : 'rotate(0deg) scale(1)' }} />
+              </span>
+            </button>
             <button
               onClick={onOpenLogin}
-              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
             >
               Entrar
             </button>
@@ -146,12 +166,12 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
           </div>
 
           {/* Título Principal */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-4xl mx-auto">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight max-w-4xl mx-auto" style={{ color: 'var(--text-heading)' }}>
             O Sistema de Gestão Definitivo para sua <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Academia ou Estúdio</span>
           </h1>
 
           {/* Subtítulo */}
-          <p className="mt-6 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-6 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
             Elimine a inadimplência, automatize pagamentos e acompanhe o faturamento mensal da sua academia em tempo real em uma plataforma moderna e ultrarrápida.
           </p>
 
@@ -167,16 +187,16 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             </button>
             <button
               onClick={onOpenLogin}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-base text-gray-300 hover:text-white transition-all"
-              style={{ background: 'rgba(31, 41, 55, 0.6)', border: '1px solid rgba(55, 65, 81, 0.5)' }}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-base transition-all"
+              style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-secondary)' }}
             >
               Já sou cliente (Fazer Login)
             </button>
           </div>
 
           {/* Garantias curtas */}
-          <div className="mt-8 flex items-center justify-center gap-6 text-xs text-gray-400">
-            <span className="flex items-center gap-1.5"><ShieldCheck size={15} className="text-emerald-400" /> Sem necessidade de cartão</span>
+          <div className="mt-8 flex items-center justify-center gap-6 text-xs" style={{ color: 'var(--text-secondary)' }}>
+            <span className="flex items-center gap-1.5"><ShieldCheck size={15} className="text-blue-400" /> Sem necessidade de cartão</span>
             <span className="flex items-center gap-1.5"><Zap size={15} className="text-amber-400" /> Ativação em 1 minuto</span>
             <span className="flex items-center gap-1.5"><CheckCircle2 size={15} className="text-blue-400" /> Suporte dedicado</span>
           </div>
@@ -193,7 +213,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
                   <div className="w-3 h-3 rounded-full bg-green-500/80" />
                   <span className="text-xs font-mono text-gray-400 ml-2">app.gymflow.com/dashboard</span>
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                   <Activity size={12} />
                   <span>Sincronizado em Tempo Real</span>
                 </div>
@@ -373,7 +393,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <span>•</span>
             <button onClick={onOpenRegister} className="hover:text-white">Criar Conta</button>
             <span>•</span>
-            <span>Versão 1.17.0</span>
+            <span>Versão 1.18.0</span>
           </div>
         </div>
       </footer>

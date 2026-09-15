@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Dumbbell, ShieldCheck, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Dumbbell, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Sun, Moon } from 'lucide-react';
 import { apiUrl } from '../lib/api';
+import { useTheme } from '../contexts/ThemeContext';
 
 const MODELOS_NEGOCIO = [
   { value: 'Academia Tradicional', label: '🏋️ Academia Tradicional' },
@@ -20,21 +21,35 @@ const MODELOS_NEGOCIO = [
  */
 export default function AuthCard({ modoInicial = 'login' }) {
   const [modoCadastro, setModoCadastro] = useState(modoInicial === 'cadastro');
+  const { theme, toggleTheme } = useTheme();
+  const isLight = theme === 'light';
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'radial-gradient(circle at 30% 20%, #0f1f3d 0%, #080c18 65%)' }}
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{ background: 'var(--bg-page)' }}
     >
+      <button
+        type="button"
+        onClick={toggleTheme}
+        title={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
+        className="absolute top-5 right-5 z-10 flex items-center justify-center w-10 h-10 rounded-full transition-colors"
+        style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)', color: 'var(--text-secondary)' }}
+      >
+        <span className="relative w-[18px] h-[18px] block">
+          <Sun size={18} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.25s, transform 0.25s', opacity: isLight ? 1 : 0, transform: isLight ? 'rotate(0deg) scale(1)' : 'rotate(-90deg) scale(0.5)' }} />
+          <Moon size={18} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.25s, transform 0.25s', opacity: isLight ? 0 : 1, transform: isLight ? 'rotate(90deg) scale(0.5)' : 'rotate(0deg) scale(1)' }} />
+        </span>
+      </button>
       <style>{`
-        .authcard { position: relative; width: 100%; max-width: 840px; height: 580px; border-radius: 28px; overflow: hidden; background: #0d1528; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 100px -30px rgba(0,0,0,0.75); }
+        .authcard { position: relative; width: 100%; max-width: 840px; height: 580px; border-radius: 28px; overflow: hidden; background: var(--surface-modal); border: 1px solid var(--border-2); box-shadow: 0 40px 100px -30px rgba(0,0,0,0.35); transition: background 0.3s, border-color 0.3s; }
         .authcard-panel { position: absolute; top: 0; width: 50%; height: 100%; transition: transform 0.7s cubic-bezier(.83,0,.17,1); }
         .authcard-brand { left: 0; z-index: 2; overflow: hidden; }
-        .authcard-formpanel { left: 50%; z-index: 3; background: #0d1528; }
+        .authcard-formpanel { left: 50%; z-index: 3; background: var(--surface-modal); transition: background 0.3s; }
         .authcard.is-cadastro .authcard-brand { transform: translateX(100%); }
         .authcard.is-cadastro .authcard-formpanel { transform: translateX(-100%); }
 
-        .authcard-brand-bg { position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(34,227,154,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(37,99,235,0.35), transparent 50%), linear-gradient(160deg, #10321f 0%, #0a1c2e 55%, #080c18 100%); }
+        .authcard-brand-bg { position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(124,58,237,0.35), transparent 50%), linear-gradient(160deg, #1e3a8a 0%, #1e1b4b 55%, #0b1020 100%); }
         .authcard-brand-bg::after { content: ''; position: absolute; inset: 0; opacity: 0.5; background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 46px); }
         .authcard-brand-icon { position: absolute; right: -30px; bottom: -30px; opacity: 0.08; transform: rotate(-18deg); }
 
@@ -43,13 +58,13 @@ export default function AuthCard({ modoInicial = 'login' }) {
         .authcard-slide.is-in { opacity: 1; transform: scale(1); }
 
         .authcard-toggle-btn { padding: 11px 30px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; border: 1.5px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.06); backdrop-filter: blur(6px); color: #fff; cursor: pointer; transition: all 0.25s; }
-        .authcard-toggle-btn:hover { background: #22e39a; border-color: #22e39a; color: #080c18; }
+        .authcard-toggle-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 
         .authcard-form-scroll { height: 100%; overflow-y: auto; padding: 40px 44px; }
-        .authcard-input { width: 100%; padding: 11px 14px; border-radius: 10px; font-size: 0.85rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #f2f4f8; transition: border-color 0.2s, background 0.2s; }
-        .authcard-input::placeholder { color: #5b6270; }
-        .authcard-input:focus { outline: none; border-color: #22e39a; background: rgba(255,255,255,0.06); }
-        .authcard-label { display: block; font-size: 0.72rem; font-weight: 600; color: #8890a4; margin-bottom: 5px; }
+        .authcard-input { width: 100%; padding: 11px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
+        .authcard-input::placeholder { color: var(--text-muted); }
+        .authcard-input:focus { outline: none; border-color: #3b82f6; background: var(--surface-alt-2); }
+        .authcard-label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
 
         @media (max-width: 760px) {
           .authcard { height: auto; min-height: 0; }
@@ -115,11 +130,11 @@ function FormLogin({ onIrCadastro }) {
 
   return (
     <div className="flex flex-col justify-center h-full">
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #22e39a, #0a9e6c)' }}>
-        <Dumbbell size={22} color="#080c18" />
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
+        <Dumbbell size={22} color="#fff" />
       </div>
-      <h2 className="text-2xl font-bold text-white mb-1">Bem-vindo de volta</h2>
-      <p className="text-sm mb-6" style={{ color: '#8890a4' }}>Entre com suas credenciais pra acessar o GymFlow.</p>
+      <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-heading)' }}>Bem-vindo de volta</h2>
+      <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Entre com suas credenciais pra acessar o GymFlow.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -137,13 +152,13 @@ function FormLogin({ onIrCadastro }) {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#22e39a', color: '#080c18' }}>
+        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
           {loading ? 'Entrando...' : (<>Entrar <ArrowRight size={16} /></>)}
         </button>
       </form>
 
-      <button type="button" onClick={onIrCadastro} className="mt-5 text-xs text-center transition-colors md:hidden" style={{ color: '#8890a4' }}>
-        Não tem conta? <span style={{ color: '#22e39a', fontWeight: 600 }}>Criar conta grátis</span>
+      <button type="button" onClick={onIrCadastro} className="mt-5 text-xs text-center transition-colors md:hidden" style={{ color: 'var(--text-muted)' }}>
+        Não tem conta? <span style={{ color: '#3b82f6', fontWeight: 600 }}>Criar conta grátis</span>
       </button>
     </div>
   );
@@ -198,12 +213,12 @@ function FormCadastro({ onVoltarLogin }) {
 
   return (
     <>
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-4" style={{ background: 'rgba(34,227,154,0.1)', border: '1px solid rgba(34,227,154,0.3)', color: '#22e39a' }}>
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-4" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
         <Sparkles size={12} />
         Teste Grátis de 30 Dias
       </div>
-      <h2 className="text-xl font-bold text-white mb-1">Crie sua conta</h2>
-      <p className="text-sm mb-5" style={{ color: '#8890a4' }}>Menos de 1 minuto pra liberar acesso total.</p>
+      <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--text-heading)' }}>Crie sua conta</h2>
+      <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>Menos de 1 minuto pra liberar acesso total.</p>
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         <div>
@@ -252,24 +267,24 @@ function FormCadastro({ onVoltarLogin }) {
           </div>
         )}
         {success && (
-          <div className="p-3 rounded-lg text-xs font-medium flex items-center gap-2" style={{ background: 'rgba(34,227,154,0.1)', border: '1px solid rgba(34,227,154,0.3)', color: '#22e39a' }}>
+          <div className="p-3 rounded-lg text-xs font-medium flex items-center gap-2" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
             <CheckCircle2 size={16} />
             Cadastro concluído! Liberando seus 30 dias de teste grátis...
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#22e39a', color: '#080c18' }}>
+        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
           {loading ? 'Criando sua conta...' : (<>Começar Meus 30 Dias Grátis <ArrowRight size={16} /></>)}
         </button>
 
-        <div className="pt-1 flex items-center justify-around text-[0.68rem]" style={{ color: '#8890a4' }}>
-          <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: '#22e39a' }} /> Sem cartão</span>
+        <div className="pt-1 flex items-center justify-around text-[0.68rem]" style={{ color: 'var(--text-muted)' }}>
+          <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: '#3b82f6' }} /> Sem cartão</span>
           <span className="flex items-center gap-1"><CheckCircle2 size={12} style={{ color: '#60a5fa' }} /> Acesso total</span>
           <span className="flex items-center gap-1"><Sparkles size={12} style={{ color: '#fbbf24' }} /> Cancele quando quiser</span>
         </div>
 
-        <button type="button" onClick={onVoltarLogin} className="w-full text-xs text-center transition-colors md:hidden" style={{ color: '#8890a4' }}>
-          Já tem conta? <span style={{ color: '#22e39a', fontWeight: 600 }}>Fazer login</span>
+        <button type="button" onClick={onVoltarLogin} className="w-full text-xs text-center transition-colors md:hidden" style={{ color: 'var(--text-muted)' }}>
+          Já tem conta? <span style={{ color: '#3b82f6', fontWeight: 600 }}>Fazer login</span>
         </button>
       </form>
     </>

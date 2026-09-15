@@ -261,7 +261,7 @@ export default function Register() {
 
             {/* Benefícios inclusos */}
             <div className="pt-2 flex items-center justify-around text-[0.7rem] text-gray-400">
-              <span className="flex items-center gap-1"><ShieldCheck size={13} className="text-emerald-400" /> Sem cartão</span>
+              <span className="flex items-center gap-1"><ShieldCheck size={13} className="text-blue-400" /> Sem cartão</span>
               <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-blue-400" /> Acesso total</span>
               <span className="flex items-center gap-1"><Sparkles size={13} className="text-amber-400" /> Cancelamento livre</span>
             </div>
