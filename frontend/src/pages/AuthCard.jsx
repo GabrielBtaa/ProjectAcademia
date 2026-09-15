@@ -61,6 +61,12 @@ export default function AuthCard({ modoInicial = 'login' }) {
         .authcard-toggle-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 
         .authcard-form-scroll { height: 100%; overflow-y: auto; padding: 28px 44px; }
+        .authcard-form-slide {
+          position: absolute; inset: 0; overflow-y: auto; padding: 28px 44px;
+          transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        .authcard-form-slide.is-out { opacity: 0; visibility: hidden; pointer-events: none; }
+        .authcard-form-slide.is-in { opacity: 1; visibility: visible; }
         .authcard-input { width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
         .authcard-input::placeholder { color: var(--text-muted); }
         .authcard-input:focus { outline: none; border-color: #3b82f6; background: var(--surface-alt-2); }
@@ -73,6 +79,8 @@ export default function AuthCard({ modoInicial = 'login' }) {
           .authcard-formpanel { left: 0; }
           .authcard-form-scroll { height: auto; overflow: visible; padding: 32px 24px; }
           .authcard-slide { position: relative; padding: 0; display: none; }
+          .authcard-form-slide { position: relative; height: auto; overflow: visible; padding: 32px 24px; }
+          .authcard-form-slide.is-out { display: none; }
         }
       `}</style>
 
@@ -99,12 +107,15 @@ export default function AuthCard({ modoInicial = 'login' }) {
           </div>
         </div>
 
-        {/* Painel de formulário — sempre à direita fisicamente, troca de lado ao alternar */}
+        {/* Painel de formulário — sempre à direita fisicamente, troca de lado ao alternar.
+            Os dois formulários ficam sobrepostos no mesmo espaço e cruzam com fade suave
+            (opacity/visibility), igual ao efeito de referência. */}
         <div className="authcard-panel authcard-formpanel">
-          <div className="authcard-form-scroll">
-            {modoCadastro
-              ? <FormCadastro onVoltarLogin={() => setModoCadastro(false)} />
-              : <FormLogin onIrCadastro={() => setModoCadastro(true)} />}
+          <div className={`authcard-form-slide ${modoCadastro ? 'is-out' : 'is-in'}`}>
+            <FormLogin onIrCadastro={() => setModoCadastro(true)} />
+          </div>
+          <div className={`authcard-form-slide ${modoCadastro ? 'is-in' : 'is-out'}`}>
+            <FormCadastro onVoltarLogin={() => setModoCadastro(false)} />
           </div>
         </div>
       </div>
@@ -245,7 +256,7 @@ function FormCadastro({ onVoltarLogin }) {
           <div>
             <label className="authcard-label">Modelo de Negócio *</label>
             <select className="authcard-input" value={form.modeloNegocio} onChange={e => handleChange('modeloNegocio', e.target.value)}>
-              {MODELOS_NEGOCIO.map(opt => <option key={opt.value} value={opt.value} style={{ background: '#0d1528' }}>{opt.label}</option>)}
+              {MODELOS_NEGOCIO.map(opt => <option key={opt.value} value={opt.value} style={{ background: '#0d1528', color: '#f2f4f8' }}>{opt.label}</option>)}
             </select>
           </div>
         </div>
