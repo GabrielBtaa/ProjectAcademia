@@ -102,7 +102,7 @@ function VariaveisMensagem({ textareaRef, value, onChange }) {
 }
 
 function dadosAcademiaVazios() {
-  return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '', chavePix: '' };
+  return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '', chavePix: '', emailAutoEnviar: false };
 }
 
 /**
@@ -112,9 +112,6 @@ function dadosAcademiaVazios() {
 export default function Configuracoes() {
   const { theme, toggleTheme } = useTheme();
   const [config, setConfig] = useState({
-    notifEmail: true,
-    notifWhatsapp: false,
-    notifVencimentos: true,
     backupAuto: true,
   });
   const [dadosAcademia, setDadosAcademia] = useState(dadosAcademiaVazios);
@@ -122,6 +119,7 @@ export default function Configuracoes() {
   const msgVencidoRef = useRef(null);
   const [salvandoAcademia, setSalvandoAcademia] = useState(false);
   const [academiaSalva, setAcademiaSalva] = useState(false);
+  const [erroSalvarAcademia, setErroSalvarAcademia] = useState(null);
 
   // Carrega os dados da academia da conta logada (não é mais por navegador)
   useEffect(() => {
@@ -137,6 +135,7 @@ export default function Configuracoes() {
         whatsappMsgVencido: data.whatsappMsgVencido || '',
         whatsappAutoEnviar: !!data.whatsappAutoEnviar,
         whatsappHoraEnvio: typeof data.whatsappHoraEnvio === 'number' ? data.whatsappHoraEnvio : 9,
+        emailAutoEnviar: !!data.emailAutoEnviar,
       }))
       .catch(() => {});
   }, []);
@@ -150,9 +149,16 @@ export default function Configuracoes() {
   const updateAcademia = (key, value) => setDadosAcademia(prev => ({ ...prev, [key]: value }));
 
   const handleSalvarAcademia = async (overrides = {}) => {
+    // Proteção: se essa função for usada direto num onClick sem wrapper, o React
+    // passa o SyntheticEvent do clique como argumento — nesse caso ignoramos.
+    const overridesValidos = (overrides && typeof overrides === 'object' && !('nativeEvent' in overrides))
+      ? overrides
+      : {};
+
     setSalvandoAcademia(true);
+    setErroSalvarAcademia(null);
     try {
-      await apiFetch('/api/conta/academia', {
+      const res = await apiFetch('/api/conta/academia', {
         method: 'PUT',
         body: JSON.stringify({
           nomeAcademia: dadosAcademia.nomeAcademia,
@@ -164,17 +170,30 @@ export default function Configuracoes() {
           whatsappMsgVencido: dadosAcademia.whatsappMsgVencido,
           whatsappAutoEnviar: dadosAcademia.whatsappAutoEnviar,
           whatsappHoraEnvio: dadosAcademia.whatsappHoraEnvio,
-          ...overrides,
+          emailAutoEnviar: dadosAcademia.emailAutoEnviar,
+          ...overridesValidos,
         }),
       });
+
+      if (!res.ok) {
+        const corpoErro = await res.json().catch(() => ({}));
+        throw new Error(corpoErro.error || 'Erro ao salvar dados da academia');
+      }
+
       window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
       setAcademiaSalva(true);
       setTimeout(() => setAcademiaSalva(false), 2500);
-    } catch {
-      // erro silencioso; poderia exibir mensagem se necessário
+    } catch (e) {
+      setErroSalvarAcademia(e.message || 'Erro ao salvar. Tente novamente.');
     } finally {
       setSalvandoAcademia(false);
     }
+  };
+
+  const handleToggleEmailAutoEnviar = () => {
+    const novoValor = !dadosAcademia.emailAutoEnviar;
+    updateAcademia('emailAutoEnviar', novoValor);
+    handleSalvarAcademia({ emailAutoEnviar: novoValor });
   };
 
   const handleToggleAutoEnviar = () => {
@@ -257,10 +276,13 @@ export default function Configuracoes() {
             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Endereço</label>
             <input className="input-field" value={dadosAcademia.endereco} onChange={e => updateAcademia('endereco', e.target.value)} />
           </div>
-          <button className="btn-primary mt-2" onClick={handleSalvarAcademia} disabled={salvandoAcademia}>
+          <button className="btn-primary mt-2" onClick={() => handleSalvarAcademia()} disabled={salvandoAcademia}>
             {academiaSalva ? <CheckCircle2 size={14} /> : <Save size={14} />}
             {salvandoAcademia ? 'Salvando...' : academiaSalva ? 'Salvo!' : 'Salvar Dados'}
           </button>
+          {erroSalvarAcademia && (
+            <p className="text-xs" style={{ color: '#f87171' }}>{erroSalvarAcademia}</p>
+          )}
         </div>
       </div>
 
@@ -338,7 +360,7 @@ export default function Configuracoes() {
           <div className="flex items-center gap-3">
             <button
               className="btn-primary flex items-center gap-2"
-              onClick={handleSalvarAcademia}
+              onClick={() => handleSalvarAcademia()}
               disabled={salvandoAcademia}
             >
               {academiaSalva ? <CheckCircle2 size={14} /> : <Save size={14} />}
@@ -452,13 +474,13 @@ export default function Configuracoes() {
           <h4 className="font-semibold text-heading text-sm">Notificações</h4>
         </div>
         <SettingItem icon={Bell} title="Notificações por E-mail" description="Receba alertas de vencimentos por e-mail">
-          <Toggle checked={config.notifEmail} onChange={() => toggle('notifEmail')} />
+          <Toggle checked={!!dadosAcademia.emailAutoEnviar} onChange={handleToggleEmailAutoEnviar} />
         </SettingItem>
-        <SettingItem icon={Bell} title="Notificações por WhatsApp" description="Envio automático para alunos inadimplentes">
-          <Toggle checked={config.notifWhatsapp} onChange={() => toggle('notifWhatsapp')} />
+        <SettingItem icon={Bell} title="Notificações por WhatsApp" description="Envio automático para alunos inadimplentes (mesma automação configurada acima)">
+          <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
         </SettingItem>
-        <SettingItem icon={Bell} title="Alerta de Vencimentos" description="Notificar 3 dias antes do vencimento">
-          <Toggle checked={config.notifVencimentos} onChange={() => toggle('notifVencimentos')} />
+        <SettingItem icon={Bell} title="Alerta de Vencimentos" description="Notificar 5 dias antes do vencimento, igual à automação">
+          <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
         </SettingItem>
       </div>
 

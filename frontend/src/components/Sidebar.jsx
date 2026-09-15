@@ -8,6 +8,8 @@ import {
   Dumbbell,
   LogOut,
   PanelLeft,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,7 +33,7 @@ function getSiglaUsuario(nome) {
 }
 
 export default function Sidebar({ activePage, setActivePage, isOpen, onClose, colapsada, onToggleColapsada }) {
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const { isRecepcionista } = useViewMode();
   const isLight = theme === 'light';
@@ -197,11 +199,35 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             </button>
           </div>
 
+          <button
+            onClick={toggleTheme}
+            className="sb-hide-when-collapsed w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors"
+            style={{ background: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.04)', border: '1px solid var(--border-2)' }}
+            title={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
+          >
+            <span className="flex items-center gap-2 text-xs font-medium" style={{ color: textMuted }}>
+              {isLight ? <Sun size={14} /> : <Moon size={14} />}
+              {isLight ? 'Modo claro' : 'Modo escuro'}
+            </span>
+            <span
+              className="relative inline-flex items-center rounded-full transition-colors"
+              style={{ width: 34, height: 18, background: isLight ? '#cbd5e1' : '#2563eb' }}
+            >
+              <span
+                className="absolute rounded-full bg-white shadow transition-transform"
+                style={{
+                  width: 14, height: 14, top: 2,
+                  transform: isLight ? 'translateX(2px)' : 'translateX(18px)',
+                }}
+              />
+            </span>
+          </button>
+
           <div
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
             style={{ background: isLight ? 'rgba(37, 99, 235, 0.06)' : 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.14.3 (teste)</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.16.0</p>
           </div>
         </div>
       </aside>

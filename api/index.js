@@ -116,6 +116,7 @@ function serializeAluno(a) {
     nome: a.nome,
     cpf: a.cpf,
     whatsapp: a.whatsapp,
+    email: a.email || '',
     dataNascimento: toDateOnly(a.dataNascimento),
     dataVencimento: toDateOnly(a.dataVencimento),
     dataCadastro: toDateOnly(a.dataCadastro),
@@ -487,6 +488,7 @@ app.post('/api/alunos', async (req, res) => {
     nome,
     cpf,
     whatsapp,
+    email,
     dataNascimento,
     planoId,
     dataVencimento,
@@ -514,6 +516,7 @@ app.post('/api/alunos', async (req, res) => {
         nome: String(nome),
         cpf: String(cpf),
         whatsapp: String(whatsapp),
+        email: email ? String(email) : null,
         dataNascimento: new Date(String(dataNascimento) + 'T12:00:00'),
         dataVencimento: new Date(String(dataVencimento) + 'T12:00:00'),
         planoId: Number(planoId),
@@ -541,6 +544,7 @@ app.put('/api/alunos/:id', async (req, res) => {
     nome,
     cpf,
     whatsapp,
+    email,
     dataNascimento,
     planoId,
     dataVencimento,
@@ -565,6 +569,7 @@ app.put('/api/alunos/:id', async (req, res) => {
         nome: String(nome),
         cpf: String(cpf),
         whatsapp: String(whatsapp),
+        email: email !== undefined ? (email ? String(email) : null) : undefined,
         dataNascimento: new Date(String(dataNascimento) + 'T12:00:00'),
         dataVencimento: new Date(String(dataVencimento) + 'T12:00:00'),
         planoId: Number(planoId),
@@ -778,11 +783,12 @@ app.get('/api/conta/academia', authenticateToken, async (req, res) => {
     whatsappMsgVencido: user.whatsappMsgVencido || '',
     whatsappAutoEnviar: user.whatsappAutoEnviar,
     whatsappHoraEnvio: typeof user.whatsappHoraEnvio === 'number' ? user.whatsappHoraEnvio : 9,
+    emailAutoEnviar: user.emailAutoEnviar,
   });
 });
 
 app.put('/api/conta/academia', authenticateToken, async (req, res) => {
-  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar, whatsappHoraEnvio } = req.body || {};
+  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar, whatsappHoraEnvio, emailAutoEnviar } = req.body || {};
 
   let horaEnvioValida;
   if (whatsappHoraEnvio !== undefined) {
@@ -806,6 +812,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
         whatsappMsgVencido: whatsappMsgVencido ?? undefined,
         whatsappAutoEnviar: typeof whatsappAutoEnviar === 'boolean' ? whatsappAutoEnviar : undefined,
         whatsappHoraEnvio: horaEnvioValida,
+        emailAutoEnviar: typeof emailAutoEnviar === 'boolean' ? emailAutoEnviar : undefined,
       },
     });
     res.json({
@@ -818,6 +825,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
       whatsappMsgVencido: updated.whatsappMsgVencido || '',
       whatsappAutoEnviar: updated.whatsappAutoEnviar,
       whatsappHoraEnvio: updated.whatsappHoraEnvio,
+      emailAutoEnviar: updated.emailAutoEnviar,
     });
   } catch (e) {
     console.error(e);
@@ -935,6 +943,32 @@ async function enviarWhatsApp(numero, texto) {
   return resp.json().catch(() => ({}));
 }
 
+// Envia e-mail via Resend (https://resend.com). Requer RESEND_API_KEY e RESEND_FROM_EMAIL
+// nas variáveis de ambiente. O "from" precisa ser de um domínio verificado na Resend
+// (ou "onboarding@resend.dev" apenas para testes).
+async function enviarEmail(destino, assunto, textoHtml) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const remetente = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !remetente) {
+    throw new Error('Resend não configurada (faltam RESEND_API_KEY / RESEND_FROM_EMAIL)');
+  }
+  const resp = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      from: remetente,
+      to: [destino],
+      subject: assunto,
+      html: textoHtml,
+    }),
+  });
+  if (!resp.ok) {
+    const corpo = await resp.text().catch(() => '');
+    throw new Error(`Resend respondeu ${resp.status}: ${corpo}`);
+  }
+  return resp.json().catch(() => ({}));
+}
+
 const whatsappStore = new Map();
 
 app.get('/api/whatsapp/config', authenticateToken, (req, res) => {
@@ -962,14 +996,20 @@ app.post('/api/whatsapp/config', authenticateToken, (req, res) => {
 
 // Roda o disparo de notificações (5 dias antes + vencidos) para um usuário específico.
 // Usado tanto pelo botão manual quanto pelo robô automático diário (cron).
-async function dispararNotificacoesParaUsuario(userId) {
+async function dispararNotificacoesParaUsuario(userId, origem = 'manual') {
   const usuario = await prisma.user.findUnique({ where: { id: userId } });
   const config = {
     nomeAcademia: usuario?.nomeAcademia,
     chavePix: usuario?.chavePix,
     msg5Dias: usuario?.whatsappMsg5Dias,
     msgVencido: usuario?.whatsappMsgVencido,
+    emailAutoEnviar: usuario?.emailAutoEnviar,
+    whatsappAutoEnviar: usuario?.whatsappAutoEnviar,
   };
+  // No disparo manual, o clique do usuário já é a autorização — envia pelos canais disponíveis.
+  // No disparo automático (cron), respeita o que está habilitado nas configurações.
+  const enviarWhatsappHabilitado = origem === 'manual' || config.whatsappAutoEnviar;
+  const enviarEmailHabilitado = origem === 'manual' || config.emailAutoEnviar;
   const alunos = await prisma.aluno.findMany({
     where: { ownerId: userId },
     include: { plano: true },
@@ -1020,11 +1060,26 @@ async function dispararNotificacoesParaUsuario(userId) {
     };
 
     try {
+      if (!enviarWhatsappHabilitado) throw new Error('Envio automático de WhatsApp desativado nas configurações');
       await enviarWhatsApp(numero, texto);
       logsExecucao.push({ ...logBase, status: 'sucesso', mensagem: tipoMsg === '5dias' ? `Lembrete enviado (vence ${dataStr})` : `Cobrança enviada (venceu ${dataStr})` });
       if (tipoMsg === '5dias') contador5Dias++; else contadorVencidos++;
     } catch (erroEnvio) {
       logsExecucao.push({ ...logBase, status: 'erro', mensagem: erroEnvio.message });
+    }
+
+    // E-mail: só tenta se o aluno tiver e-mail cadastrado e o envio por e-mail estiver liberado.
+    if (aluno.email && enviarEmailHabilitado) {
+      const assunto = tipoMsg === '5dias'
+        ? `Lembrete: sua mensalidade na ${nomeAcademia} vence em 5 dias`
+        : `Mensalidade vencida na ${nomeAcademia}`;
+      const html = `<p>${texto.replace(/\n/g, '<br/>')}</p>`;
+      try {
+        await enviarEmail(aluno.email, assunto, html);
+        logsExecucao.push({ ...logBase, id: Date.now() + Math.random(), canal: 'email', status: 'sucesso', mensagem: `E-mail enviado para ${aluno.email}` });
+      } catch (erroEmail) {
+        logsExecucao.push({ ...logBase, id: Date.now() + Math.random(), canal: 'email', status: 'erro', mensagem: erroEmail.message });
+      }
     }
   }
 
@@ -1067,7 +1122,9 @@ app.get('/api/cron/whatsapp-diario', async (req, res) => {
     const OFFSET_BRASILIA = 3; // UTC-3
     const horaAtualBrasilia = (new Date().getUTCHours() - OFFSET_BRASILIA + 24) % 24;
 
-    const todosAutoEnviar = await prisma.user.findMany({ where: { whatsappAutoEnviar: true } });
+    const todosAutoEnviar = await prisma.user.findMany({
+      where: { OR: [{ whatsappAutoEnviar: true }, { emailAutoEnviar: true }] },
+    });
     const usuarios = todosAutoEnviar.filter(u => {
       const horaConfigurada = typeof u.whatsappHoraEnvio === 'number' ? u.whatsappHoraEnvio : 9;
       return horaConfigurada === horaAtualBrasilia;
@@ -1076,7 +1133,7 @@ app.get('/api/cron/whatsapp-diario', async (req, res) => {
     const resultados = [];
     for (const u of usuarios) {
       try {
-        const r = await dispararNotificacoesParaUsuario(u.id);
+        const r = await dispararNotificacoesParaUsuario(u.id, 'cron');
         resultados.push({ userId: u.id, enviados: r.logsExecucao.filter(l => l.status === 'sucesso').length });
       } catch (e) {
         resultados.push({ userId: u.id, erro: e.message });

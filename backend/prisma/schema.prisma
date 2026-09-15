@@ -42,6 +42,7 @@ model User {
   whatsappMsgVencido   String?  @db.Text
   whatsappAutoEnviar   Boolean  @default(false)
   whatsappHoraEnvio    Int      @default(9)
+  emailAutoEnviar      Boolean  @default(false)
 }
 
 model Plano {
@@ -78,6 +79,7 @@ model Aluno {
   nome           String
   cpf            String
   whatsapp       String
+  email          String?
   dataNascimento DateTime    @db.Date
   dataVencimento DateTime    @db.Date
   status         StatusAluno @default(ativo)

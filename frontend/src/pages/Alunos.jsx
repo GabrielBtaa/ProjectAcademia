@@ -39,6 +39,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
       nome: '',
       cpf: '',
       whatsapp: '',
+      email: '',
       dataNascimento: '',
       planoId: planos[0]?.id ?? 1,
       dataVencimento: '',
@@ -59,6 +60,9 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
     if (!form.nome.trim()) errs.nome = 'Nome é obrigatório';
     if (!form.cpf.trim()) errs.cpf = 'CPF é obrigatório';
     if (!form.whatsapp.trim()) errs.whatsapp = 'WhatsApp é obrigatório';
+    if (form.email && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = 'E-mail inválido';
+    }
     if (!form.dataNascimento) errs.dataNascimento = 'Data de nascimento é obrigatória';
     if (!form.dataVencimento) errs.dataVencimento = 'Data de vencimento é obrigatória';
     setErrors(errs);
@@ -129,6 +133,17 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
                 onChange={e => handleChange('whatsapp', e.target.value)}
               />
               {errors.whatsapp && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.whatsapp}</p>}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>E-mail (opcional)</label>
+              <input
+                className="input-field"
+                type="email"
+                placeholder="aluno@email.com"
+                value={form.email || ''}
+                onChange={e => handleChange('email', e.target.value)}
+              />
+              {errors.email && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.email}</p>}
             </div>
           </div>
 
@@ -422,6 +437,7 @@ export default function Alunos({ searchTerm = '' }) {
       nome: dadosAluno.nome,
       cpf: dadosAluno.cpf,
       whatsapp: dadosAluno.whatsapp,
+      email: dadosAluno.email || null,
       dataNascimento: dadosAluno.dataNascimento,
       planoId: dadosAluno.planoId,
       dataVencimento: dadosAluno.dataVencimento,
