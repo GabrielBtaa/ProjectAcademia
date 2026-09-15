@@ -172,6 +172,34 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
               );
             })}
           </ul>
+
+          <div className="mt-1 pt-2" style={{ borderTop: `1px solid ${border}` }}>
+            <button
+              onClick={toggleTheme}
+              title={colapsada ? (isLight ? 'Modo escuro' : 'Modo claro') : undefined}
+              className="sb-theme-toggle w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200"
+              style={{ color: textNavDefault }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = surfaceHover; e.currentTarget.style.color = isLight ? '#0f172a' : '#e5e7eb'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = textNavDefault; }}
+            >
+              <span className="relative flex-shrink-0 w-[18px] h-[18px]">
+                <Sun size={18} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.25s, transform 0.25s', opacity: isLight ? 1 : 0, transform: isLight ? 'rotate(0deg) scale(1)' : 'rotate(-90deg) scale(0.5)' }} />
+                <Moon size={18} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.25s, transform 0.25s', opacity: isLight ? 0 : 1, transform: isLight ? 'rotate(90deg) scale(0.5)' : 'rotate(0deg) scale(1)' }} />
+              </span>
+              <span className="sb-hide-when-collapsed flex-1 text-left whitespace-nowrap">
+                {isLight ? 'Modo claro' : 'Modo escuro'}
+              </span>
+              <span
+                className="sb-hide-when-collapsed relative inline-flex items-center rounded-full flex-shrink-0 transition-colors duration-300"
+                style={{ width: 32, height: 18, background: isLight ? 'var(--border-3)' : '#2563eb' }}
+              >
+                <span
+                  className="absolute rounded-full bg-white shadow-sm transition-transform duration-300"
+                  style={{ width: 14, height: 14, top: 2, left: 2, transform: isLight ? 'translateX(0)' : 'translateX(14px)' }}
+                />
+              </span>
+            </button>
+          </div>
         </nav>
 
         {/* Rodapé — perfil do usuário */}
@@ -199,35 +227,11 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             </button>
           </div>
 
-          <button
-            onClick={toggleTheme}
-            className="sb-hide-when-collapsed w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors"
-            style={{ background: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.04)', border: '1px solid var(--border-2)' }}
-            title={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
-          >
-            <span className="flex items-center gap-2 text-xs font-medium" style={{ color: textMuted }}>
-              {isLight ? <Sun size={14} /> : <Moon size={14} />}
-              {isLight ? 'Modo claro' : 'Modo escuro'}
-            </span>
-            <span
-              className="relative inline-flex items-center rounded-full transition-colors"
-              style={{ width: 34, height: 18, background: isLight ? '#cbd5e1' : '#2563eb' }}
-            >
-              <span
-                className="absolute rounded-full bg-white shadow transition-transform"
-                style={{
-                  width: 14, height: 14, top: 2,
-                  transform: isLight ? 'translateX(2px)' : 'translateX(18px)',
-                }}
-              />
-            </span>
-          </button>
-
           <div
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
             style={{ background: isLight ? 'rgba(37, 99, 235, 0.06)' : 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.16.0</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.17.0</p>
           </div>
         </div>
       </aside>

@@ -1,0 +1,16 @@
+name: Disparo horário de cobranças WhatsApp
+
+on:
+  schedule:
+    # Roda todo início de hora, o endpoint decide sozinho se é a hora certa de cada academia
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint de cron do WhatsApp
+        run: |
+          curl -f -X GET "https://projeto-academia-sable.vercel.app/api/cron/whatsapp-diario" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

@@ -368,11 +368,11 @@ export default function Configuracoes() {
             </button>
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/50 space-y-3">
+          <div className="p-3 rounded-lg space-y-3" style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-white">Envio Automático Diário</p>
-                <p className="text-[0.7rem] text-gray-400">
+                <p className="text-xs font-bold" style={{ color: 'var(--text-heading)' }}>Envio Automático Diário</p>
+                <p className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
                   O servidor enviará os lembretes de 5 dias antes e cobranças de vencido automaticamente às{' '}
                   {String(dadosAcademia.whatsappHoraEnvio ?? 9).padStart(2, '0')}:00 (horário de Brasília)
                 </p>
@@ -381,15 +381,16 @@ export default function Configuracoes() {
             </div>
 
             {dadosAcademia.whatsappAutoEnviar && (
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
-                <label htmlFor="horaEnvio" className="text-[0.7rem] text-gray-400">
+              <div className="flex items-center gap-2 pt-1" style={{ borderTop: '1px solid var(--border-2)' }}>
+                <label htmlFor="horaEnvio" className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
                   Horário do disparo:
                 </label>
                 <select
                   id="horaEnvio"
                   value={dadosAcademia.whatsappHoraEnvio ?? 9}
                   onChange={handleChangeHoraEnvio}
-                  className="bg-slate-900/60 border border-slate-700/50 text-white text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }}
                 >
                   {Array.from({ length: 24 }, (_, h) => (
                     <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
