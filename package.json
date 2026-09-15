@@ -1,6 +1,6 @@
 {
   "name": "projeto-academia",
-  "version": "1.18.0",
+  "version": "1.18.1",
   "private": true,
   "scripts": {
     "build": "npm run build:frontend && npm run build:backend",

@@ -60,11 +60,11 @@ export default function AuthCard({ modoInicial = 'login' }) {
         .authcard-toggle-btn { padding: 11px 30px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; border: 1.5px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.06); backdrop-filter: blur(6px); color: #fff; cursor: pointer; transition: all 0.25s; }
         .authcard-toggle-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 
-        .authcard-form-scroll { height: 100%; overflow-y: auto; padding: 40px 44px; }
-        .authcard-input { width: 100%; padding: 11px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
+        .authcard-form-scroll { height: 100%; overflow-y: auto; padding: 28px 44px; }
+        .authcard-input { width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
         .authcard-input::placeholder { color: var(--text-muted); }
         .authcard-input:focus { outline: none; border-color: #3b82f6; background: var(--surface-alt-2); }
-        .authcard-label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+        .authcard-label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
 
         @media (max-width: 760px) {
           .authcard { height: auto; min-height: 0; }
@@ -152,7 +152,7 @@ function FormLogin({ onIrCadastro }) {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+        <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
           {loading ? 'Entrando...' : (<>Entrar <ArrowRight size={16} /></>)}
         </button>
       </form>
@@ -213,20 +213,20 @@ function FormCadastro({ onVoltarLogin }) {
 
   return (
     <>
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-4" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-3" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
         <Sparkles size={12} />
         Teste Grátis de 30 Dias
       </div>
       <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--text-heading)' }}>Crie sua conta</h2>
-      <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>Menos de 1 minuto pra liberar acesso total.</p>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Menos de 1 minuto pra liberar acesso total.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-3.5">
+      <form onSubmit={handleSubmit} className="space-y-2.5">
         <div>
           <label className="authcard-label">Nome Completo *</label>
           <input className="authcard-input" required placeholder="Ex: Gabriel Silva" value={form.nome} onChange={e => handleChange('nome', e.target.value)} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="authcard-label">Seu Email *</label>
             <input type="email" className="authcard-input" required placeholder="seu@email.com" value={form.email} onChange={e => handleChange('email', e.target.value)} />
@@ -237,7 +237,7 @@ function FormCadastro({ onVoltarLogin }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="authcard-label">Celular / WhatsApp *</label>
             <input type="tel" className="authcard-input" required placeholder="(11) 99999-9999" value={form.celular} onChange={e => handleChange('celular', e.target.value)} />
@@ -250,7 +250,7 @@ function FormCadastro({ onVoltarLogin }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="authcard-label">Senha de Acesso *</label>
             <input type="password" className="authcard-input" required placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => handleChange('password', e.target.value)} />
@@ -273,11 +273,11 @@ function FormCadastro({ onVoltarLogin }) {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+        <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
           {loading ? 'Criando sua conta...' : (<>Começar Meus 30 Dias Grátis <ArrowRight size={16} /></>)}
         </button>
 
-        <div className="pt-1 flex items-center justify-around text-[0.68rem]" style={{ color: 'var(--text-muted)' }}>
+        <div className="flex items-center justify-around text-[0.68rem]" style={{ color: 'var(--text-muted)' }}>
           <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: '#3b82f6' }} /> Sem cartão</span>
           <span className="flex items-center gap-1"><CheckCircle2 size={12} style={{ color: '#60a5fa' }} /> Acesso total</span>
           <span className="flex items-center gap-1"><Sparkles size={12} style={{ color: '#fbbf24' }} /> Cancele quando quiser</span>
