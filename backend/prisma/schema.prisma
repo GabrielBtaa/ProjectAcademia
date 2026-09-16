@@ -29,6 +29,9 @@ model User {
   planos               Plano[]
   alunos               Aluno[]
   stripeCustomerId     String?
+  stripeSubscriptionId String?
+  cancelamentoAgendado Boolean  @default(false)
+  assinaturaRenovaEm   DateTime?
   subscriptionStatus   String   @default("inactive") // inactive | trial | active | past_due | canceled
   subscriptionTier     String? // starter | pro | business
   maxAlunos            Int      @default(0)

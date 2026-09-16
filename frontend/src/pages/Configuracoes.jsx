@@ -8,6 +8,8 @@ import {
   Save,
   Lock,
   CheckCircle2,
+  CreditCard,
+  AlertTriangle,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -101,6 +103,8 @@ function VariaveisMensagem({ textareaRef, value, onChange }) {
   );
 }
 
+const NOMES_PLANO = { starter: 'Starter (até 50 alunos)', pro: 'Pro (até 100 alunos)', business: 'Business (até 250 alunos)' };
+
 function dadosAcademiaVazios() {
   return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '', chavePix: '', emailAutoEnviar: false };
 }
@@ -144,6 +148,50 @@ export default function Configuracoes() {
   const [senhaLoading, setSenhaLoading] = useState(false);
   const [senhaErro, setSenhaErro] = useState(null);
   const [senhaSucesso, setSenhaSucesso] = useState(false);
+
+  // ===== Assinatura =====
+  const [billingStatus, setBillingStatus] = useState(null);
+  const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false);
+  const [processandoAssinatura, setProcessandoAssinatura] = useState(false);
+  const [erroAssinatura, setErroAssinatura] = useState(null);
+
+  useEffect(() => {
+    apiFetch('/api/billing/status')
+      .then(res => res.json())
+      .then(data => setBillingStatus(data))
+      .catch(() => {});
+  }, []);
+
+  const handleCancelarAssinatura = async () => {
+    setProcessandoAssinatura(true);
+    setErroAssinatura(null);
+    try {
+      const res = await apiFetch('/api/billing/cancelar', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro ao cancelar assinatura');
+      setBillingStatus(prev => ({ ...prev, cancelamentoAgendado: true, assinaturaRenovaEm: data.assinaturaRenovaEm }));
+      setMostrarConfirmCancelar(false);
+    } catch (e) {
+      setErroAssinatura(e.message);
+    } finally {
+      setProcessandoAssinatura(false);
+    }
+  };
+
+  const handleReativarAssinatura = async () => {
+    setProcessandoAssinatura(true);
+    setErroAssinatura(null);
+    try {
+      const res = await apiFetch('/api/billing/reativar', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro ao reativar assinatura');
+      setBillingStatus(prev => ({ ...prev, cancelamentoAgendado: false }));
+    } catch (e) {
+      setErroAssinatura(e.message);
+    } finally {
+      setProcessandoAssinatura(false);
+    }
+  };
 
   const toggle = (key) => setConfig(prev => ({ ...prev, [key]: !prev[key] }));
   const updateAcademia = (key, value) => setDadosAcademia(prev => ({ ...prev, [key]: value }));
@@ -484,6 +532,85 @@ export default function Configuracoes() {
           <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
         </SettingItem>
       </div>
+
+      {/* Assinatura */}
+      {billingStatus && !billingStatus.isAdmin && (
+        <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
+          <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+            <CreditCard size={17} style={{ color: '#60a5fa' }} />
+            <h4 className="font-semibold text-heading text-sm">Assinatura</h4>
+          </div>
+
+          <div className="py-4 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-heading)' }}>
+                  Plano {NOMES_PLANO[billingStatus.subscriptionTier] || billingStatus.subscriptionTier || '—'}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {billingStatus.subscriptionStatus === 'trial' && 'Você está no período de teste grátis.'}
+                  {billingStatus.subscriptionStatus === 'active' && !billingStatus.cancelamentoAgendado && billingStatus.assinaturaRenovaEm &&
+                    `Renova automaticamente em ${new Date(billingStatus.assinaturaRenovaEm).toLocaleDateString('pt-BR')}.`}
+                  {billingStatus.subscriptionStatus === 'active' && billingStatus.cancelamentoAgendado && billingStatus.assinaturaRenovaEm &&
+                    `Cancelamento agendado — acesso liberado até ${new Date(billingStatus.assinaturaRenovaEm).toLocaleDateString('pt-BR')}.`}
+                  {(billingStatus.subscriptionStatus === 'past_due' || billingStatus.subscriptionStatus === 'canceled' || billingStatus.subscriptionStatus === 'inactive') &&
+                    'Assinatura inativa.'}
+                </p>
+              </div>
+
+              {billingStatus.temAssinaturaStripe && billingStatus.subscriptionStatus === 'active' && (
+                billingStatus.cancelamentoAgendado ? (
+                  <button
+                    onClick={handleReativarAssinatura}
+                    disabled={processandoAssinatura}
+                    className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}
+                  >
+                    {processandoAssinatura ? 'Aguarde...' : 'Reativar assinatura'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setMostrarConfirmCancelar(true)}
+                    className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                    style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}
+                  >
+                    Cancelar assinatura
+                  </button>
+                )
+              )}
+            </div>
+
+            {mostrarConfirmCancelar && (
+              <div className="rounded-lg p-3 space-y-2" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                <p className="text-xs flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
+                  <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#f87171' }} />
+                  Tem certeza? Você continua com acesso total até o fim do período já pago
+                  {billingStatus.assinaturaRenovaEm && ` (${new Date(billingStatus.assinaturaRenovaEm).toLocaleDateString('pt-BR')})`}, e depois a conta é bloqueada. Não vamos cobrar de novo.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCancelarAssinatura}
+                    disabled={processandoAssinatura}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
+                    style={{ background: '#ef4444', color: '#fff' }}
+                  >
+                    {processandoAssinatura ? 'Cancelando...' : 'Sim, cancelar'}
+                  </button>
+                  <button
+                    onClick={() => setMostrarConfirmCancelar(false)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                    style={{ background: 'var(--surface-alt-1)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }}
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {erroAssinatura && <p className="text-xs" style={{ color: '#f87171' }}>{erroAssinatura}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Aparência e Sistema */}
       <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>

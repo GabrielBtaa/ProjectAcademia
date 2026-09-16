@@ -43,30 +43,40 @@ export default function AuthCard({ modoInicial = 'login' }) {
       </button>
       <style>{`
         .authcard { position: relative; width: 100%; max-width: 840px; height: 580px; border-radius: 28px; overflow: hidden; background: var(--surface-modal); border: 1px solid var(--border-2); box-shadow: 0 40px 100px -30px rgba(0,0,0,0.35); transition: background 0.3s, border-color 0.3s; }
-        .authcard-panel { position: absolute; top: 0; width: 50%; height: 100%; transition: transform 0.7s cubic-bezier(.83,0,.17,1); }
-        .authcard-brand { left: 0; z-index: 2; overflow: hidden; }
-        .authcard-formpanel { left: 50%; z-index: 3; background: var(--surface-modal); transition: background 0.3s; }
-        .authcard.is-cadastro .authcard-brand { transform: translateX(100%); }
-        .authcard.is-cadastro .authcard-formpanel { transform: translateX(-100%); }
+
+        /* Cada bloco (marca-login, marca-cadastro, form-login, form-cadastro) se move e
+           esconde/mostra de forma independente, exatamente como no modelo de referência:
+           translate + opacity/visibility juntos. Os formulários (z-index maior) sempre
+           passam POR CIMA da marca (z-index menor) durante o cruzamento. */
+        .authcard-block {
+          position: absolute; top: 0; width: 50%; height: 100%; overflow: hidden;
+          transition: transform 0.7s cubic-bezier(.83,0,.17,1), opacity 0.55s ease, visibility 0.55s;
+        }
+        .authcard-block-inner { position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 40px; }
+
+        /* Marca — sempre à esquerda física, z-index mais baixo (passa por baixo) */
+        .authcard-brand-login, .authcard-brand-register { left: 0; z-index: 2; }
+        .authcard-brand-login { transform: translateX(0); opacity: 1; visibility: visible; }
+        .authcard-brand-register { transform: translateX(-100%); opacity: 0; visibility: hidden; }
+        .authcard.is-cadastro .authcard-brand-login { transform: translateX(100%); opacity: 0; visibility: hidden; }
+        .authcard.is-cadastro .authcard-brand-register { transform: translateX(0); opacity: 1; visibility: visible; }
+
+        /* Formulário — sempre à direita física, z-index mais alto (passa por cima) */
+        .authcard-form-login, .authcard-form-register { left: 50%; z-index: 3; background: var(--surface-modal); transition: transform 0.7s cubic-bezier(.83,0,.17,1), opacity 0.55s ease, visibility 0.55s, background 0.3s; }
+        .authcard-form-login { transform: translateX(0); opacity: 1; visibility: visible; }
+        .authcard-form-register { transform: translateX(-100%); opacity: 0; visibility: hidden; }
+        .authcard.is-cadastro .authcard-form-login { transform: translateX(100%); opacity: 0; visibility: hidden; }
+        .authcard.is-cadastro .authcard-form-register { transform: translateX(0); opacity: 1; visibility: visible; }
+
+        .authcard-form-inner { padding: 28px 44px; overflow-y: auto; align-items: stretch; justify-content: flex-start; }
 
         .authcard-brand-bg { position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(124,58,237,0.35), transparent 50%), linear-gradient(160deg, #1e3a8a 0%, #1e1b4b 55%, #0b1020 100%); }
         .authcard-brand-bg::after { content: ''; position: absolute; inset: 0; opacity: 0.5; background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 46px); }
         .authcard-brand-icon { position: absolute; right: -30px; bottom: -30px; opacity: 0.08; transform: rotate(-18deg); }
 
-        .authcard-slide { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 40px; transition: opacity 0.4s ease, transform 0.5s ease; }
-        .authcard-slide.is-out { opacity: 0; pointer-events: none; transform: scale(0.97); }
-        .authcard-slide.is-in { opacity: 1; transform: scale(1); }
-
-        .authcard-toggle-btn { padding: 11px 30px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; border: 1.5px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.06); backdrop-filter: blur(6px); color: #fff; cursor: pointer; transition: all 0.25s; }
+        .authcard-toggle-btn { padding: 11px 30px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; border: 1.5px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.06); backdrop-filter: blur(6px); color: #fff; cursor: pointer; transition: all 0.25s; position: relative; z-index: 1; }
         .authcard-toggle-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 
-        .authcard-form-scroll { height: 100%; overflow-y: auto; padding: 28px 44px; }
-        .authcard-form-slide {
-          position: absolute; inset: 0; overflow-y: auto; padding: 28px 44px;
-          transition: opacity 0.5s ease, visibility 0.5s;
-        }
-        .authcard-form-slide.is-out { opacity: 0; visibility: hidden; pointer-events: none; }
-        .authcard-form-slide.is-in { opacity: 1; visibility: visible; }
         .authcard-input { width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
         .authcard-input::placeholder { color: var(--text-muted); }
         .authcard-input:focus { outline: none; border-color: #3b82f6; background: var(--surface-alt-2); }
@@ -74,31 +84,34 @@ export default function AuthCard({ modoInicial = 'login' }) {
 
         @media (max-width: 760px) {
           .authcard { height: auto; min-height: 0; }
-          .authcard-panel { position: relative; width: 100%; height: auto; transform: none !important; }
-          .authcard-brand { display: none; }
-          .authcard-formpanel { left: 0; }
-          .authcard-form-scroll { height: auto; overflow: visible; padding: 32px 24px; }
-          .authcard-slide { position: relative; padding: 0; display: none; }
-          .authcard-form-slide { position: relative; height: auto; overflow: visible; padding: 32px 24px; }
-          .authcard-form-slide.is-out { display: none; }
+          .authcard-block { position: relative; width: 100%; height: auto; transform: none !important; transition: opacity 0.4s ease, visibility 0.4s; }
+          .authcard-brand-login, .authcard-brand-register { display: none; }
+          .authcard-form-login, .authcard-form-register { left: 0; opacity: 1; visibility: visible; position: absolute; inset: 0; }
+          .authcard.is-cadastro .authcard-form-login,
+          .authcard:not(.is-cadastro) .authcard-form-register { display: none; }
+          .authcard-form-inner { height: auto; overflow: visible; padding: 32px 24px; position: relative; }
         }
       `}</style>
 
       <div className={`authcard ${modoCadastro ? 'is-cadastro' : ''}`}>
-        {/* Painel de marca — sempre à esquerda fisicamente, troca de lado ao alternar */}
-        <div className="authcard-panel authcard-brand">
+        {/* Bloco: marca no modo LOGIN — desliza pra direita e sai por baixo ao trocar */}
+        <div className="authcard-block authcard-brand-login">
           <div className="authcard-brand-bg" />
           <Dumbbell size={280} className="authcard-brand-icon" color="#fff" />
-
-          <div className={`authcard-slide ${modoCadastro ? 'is-out' : 'is-in'}`} style={{ color: '#f2f4f8' }}>
+          <div className="authcard-block-inner" style={{ color: '#f2f4f8' }}>
             <h2 className="text-2xl font-bold mb-2">Olá!</h2>
             <p className="text-sm mb-7" style={{ color: '#c3cad8', maxWidth: 260 }}>
               Ainda não tem uma academia cadastrada no GymFlow? Comece agora, é grátis por 30 dias.
             </p>
             <button type="button" onClick={() => setModoCadastro(true)} className="authcard-toggle-btn">CRIAR CONTA</button>
           </div>
+        </div>
 
-          <div className={`authcard-slide ${modoCadastro ? 'is-in' : 'is-out'}`} style={{ color: '#f2f4f8' }}>
+        {/* Bloco: marca no modo CADASTRO — entra por baixo, vindo da esquerda */}
+        <div className="authcard-block authcard-brand-register">
+          <div className="authcard-brand-bg" />
+          <Dumbbell size={280} className="authcard-brand-icon" color="#fff" />
+          <div className="authcard-block-inner" style={{ color: '#f2f4f8' }}>
             <h2 className="text-2xl font-bold mb-2">Comece agora</h2>
             <p className="text-sm mb-7" style={{ color: '#c3cad8', maxWidth: 260 }}>
               30 dias grátis, sem cartão de crédito. Já tem uma conta no GymFlow?
@@ -107,14 +120,16 @@ export default function AuthCard({ modoInicial = 'login' }) {
           </div>
         </div>
 
-        {/* Painel de formulário — sempre à direita fisicamente, troca de lado ao alternar.
-            Os dois formulários ficam sobrepostos no mesmo espaço e cruzam com fade suave
-            (opacity/visibility), igual ao efeito de referência. */}
-        <div className="authcard-panel authcard-formpanel">
-          <div className={`authcard-form-slide ${modoCadastro ? 'is-out' : 'is-in'}`}>
+        {/* Bloco: formulário de LOGIN — passa por cima, saindo pela direita */}
+        <div className="authcard-block authcard-form-login">
+          <div className="authcard-block-inner authcard-form-inner">
             <FormLogin onIrCadastro={() => setModoCadastro(true)} />
           </div>
-          <div className={`authcard-form-slide ${modoCadastro ? 'is-in' : 'is-out'}`}>
+        </div>
+
+        {/* Bloco: formulário de CADASTRO — passa por cima, entrando pela direita */}
+        <div className="authcard-block authcard-form-register">
+          <div className="authcard-block-inner authcard-form-inner">
             <FormCadastro onVoltarLogin={() => setModoCadastro(false)} />
           </div>
         </div>

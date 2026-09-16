@@ -843,7 +843,51 @@ app.get('/api/billing/status', authenticateToken, async (req, res) => {
     maxAlunos: user.maxAlunos,
     isAdmin: user.role === 'admin',
     trialEndsAt: user.trialEndsAt,
+    cancelamentoAgendado: user.cancelamentoAgendado,
+    assinaturaRenovaEm: user.assinaturaRenovaEm,
+    temAssinaturaStripe: !!user.stripeSubscriptionId,
   });
+});
+
+// Cancela a assinatura ao final do período já pago (o acesso continua liberado
+// até a data de renovação — não bloqueia na hora, já que o mês já foi pago).
+app.post('/api/billing/cancelar', authenticateToken, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Pagamentos ainda não configurados no servidor' });
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user?.stripeSubscriptionId) {
+    return res.status(400).json({ error: 'Nenhuma assinatura ativa encontrada para esta conta' });
+  }
+  try {
+    const sub = await stripe.subscriptions.update(user.stripeSubscriptionId, { cancel_at_period_end: true });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        cancelamentoAgendado: true,
+        assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+      },
+    });
+    res.json({ ok: true, assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao cancelar assinatura' });
+  }
+});
+
+// Desfaz um cancelamento agendado (a pessoa mudou de ideia antes do fim do período)
+app.post('/api/billing/reativar', authenticateToken, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Pagamentos ainda não configurados no servidor' });
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user?.stripeSubscriptionId) {
+    return res.status(400).json({ error: 'Nenhuma assinatura ativa encontrada para esta conta' });
+  }
+  try {
+    await stripe.subscriptions.update(user.stripeSubscriptionId, { cancel_at_period_end: false });
+    await prisma.user.update({ where: { id: user.id }, data: { cancelamentoAgendado: false } });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao reativar assinatura' });
+  }
 });
 
 // Cria uma sessão de Checkout do Stripe para o plano escolhido
@@ -899,7 +943,13 @@ app.post('/api/billing/webhook', async (req, res) => {
       if (userId && plano && LIMITES_POR_PLANO[plano]) {
         await prisma.user.update({
           where: { id: userId },
-          data: { subscriptionStatus: 'active', subscriptionTier: plano, maxAlunos: LIMITES_POR_PLANO[plano] },
+          data: {
+            subscriptionStatus: 'active',
+            subscriptionTier: plano,
+            maxAlunos: LIMITES_POR_PLANO[plano],
+            stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+            cancelamentoAgendado: false,
+          },
         });
       }
     }
@@ -911,7 +961,11 @@ app.post('/api/billing/webhook', async (req, res) => {
         const ativo = sub.status === 'active' || sub.status === 'trialing';
         await prisma.user.update({
           where: { id: user.id },
-          data: { subscriptionStatus: ativo ? 'active' : (sub.status === 'past_due' ? 'past_due' : 'canceled') },
+          data: {
+            subscriptionStatus: ativo ? 'active' : (sub.status === 'past_due' ? 'past_due' : 'canceled'),
+            cancelamentoAgendado: !!sub.cancel_at_period_end,
+            assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+          },
         });
       }
     }
