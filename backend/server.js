@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import { prisma } from "./lib/prisma.js";
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -13,12 +15,26 @@ const app = express();
 
 const corsOrigins = process.env.FRONTEND_ORIGIN
   ? process.env.FRONTEND_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean)
-  : true;
+  : ["https://projeto-academia-sable.vercel.app", "http://localhost:5173"];
 
 app.use(cors({ origin: corsOrigins }));
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
-const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
+if (!process.env.JWT_SECRET) {
+  console.error("[SEGURANÇA] JWT_SECRET não definido — usando segredo aleatório temporário.");
+}
+
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+});
+const MAX_TENTATIVAS_LOGIN = 5;
+const DURACAO_BLOQUEIO_MS = 15 * 60 * 1000;
+const HASH_FANTASMA = bcrypt.hashSync("senha_que_nunca_sera_usada", 10);
 
 // Middleware de autenticação
 function authenticateToken(req, res, next) {
@@ -29,9 +45,19 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: "Token não fornecido" });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, user) => {
     if (err) {
       return res.status(403).json({ error: "Token inválido" });
+    }
+    if (user?.jti) {
+      try {
+        const revogado = await prisma.tokenRevogado.findUnique({ where: { jti: user.jti } });
+        if (revogado) {
+          return res.status(401).json({ error: "Sessão encerrada. Faça login novamente." });
+        }
+      } catch (e) {
+        console.error("Erro ao checar token revogado:", e);
+      }
     }
     req.user = user;
     next();
@@ -149,7 +175,7 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", loginRateLimiter, async (req, res) => {
   const { email, password } = req.body || {};
 
   if (!email || !password) {
@@ -157,21 +183,38 @@ app.post("/api/auth/login", async (req, res) => {
   }
 
   try {
+    const cleanEmail = String(email).trim().toLowerCase();
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email: cleanEmail }
     });
 
-    if (!user) {
-      return res.status(401).json({ error: "Credenciais inválidas" });
+    if (user?.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+      return res.status(429).json({ error: "Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em alguns minutos." });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: "Credenciais inválidas" });
+    const validPassword = await bcrypt.compare(password, user ? user.password : HASH_FANTASMA);
+
+    if (!user || !validPassword) {
+      if (user) {
+        const tentativas = user.failedLoginAttempts + 1;
+        const bloquear = tentativas >= MAX_TENTATIVAS_LOGIN;
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: bloquear ? 0 : tentativas,
+            lockedUntil: bloquear ? new Date(Date.now() + DURACAO_BLOQUEIO_MS) : null,
+          },
+        });
+      }
+      return res.status(401).json({ error: "E-mail ou senha inválidos." });
+    }
+
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, jti: crypto.randomUUID() },
       JWT_SECRET,
       { expiresIn: "24h" }
     );
@@ -188,6 +231,22 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.post("/api/auth/logout", authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.jti && req.user?.exp) {
+      await prisma.tokenRevogado.upsert({
+        where: { jti: req.user.jti },
+        update: {},
+        create: { jti: req.user.jti, expiraEm: new Date(req.user.exp * 1000) },
+      });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Erro ao encerrar sessão" });
   }
 });
 

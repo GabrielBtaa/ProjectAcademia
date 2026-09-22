@@ -3,6 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -45,14 +47,47 @@ function ensurePagamentoSchema() {
   return pagamentoSchemaPromise;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+// SEGURANÇA: nunca usar um segredo padrão previsível para assinar JWTs — isso permitiria
+// que qualquer pessoa forje tokens válidos. Se a env var não estiver configurada, geramos
+// um segredo aleatório em memória (o efeito colateral é que reiniciar o processo derruba
+// sessões existentes, o que é um problema muito menor do que um segredo conhecido).
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString('hex');
+if (!process.env.JWT_SECRET) {
+  console.error('[SEGURANÇA] JWT_SECRET não definido nas variáveis de ambiente — usando um segredo aleatório temporário. Configure JWT_SECRET na Vercel o quanto antes.');
+}
 
+// SEGURANÇA: nunca cair para "aceitar qualquer origem" — isso equivale a Origin: *
+// em uma API que usa cookies/tokens. Se a variável não estiver configurada, usamos
+// como allowlist só os domínios oficiais conhecidos do projeto.
 const corsOrigins = process.env.FRONTEND_ORIGIN
   ? process.env.FRONTEND_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
-  : true;
+  : ['https://projeto-academia-sable.vercel.app'];
+
+if (!process.env.FRONTEND_ORIGIN) {
+  console.error('[SEGURANÇA] FRONTEND_ORIGIN não definido — usando allowlist padrão restrita. Configure FRONTEND_ORIGIN na Vercel.');
+}
 
 app.use(cors({ origin: corsOrigins }));
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+
+// SEGURANÇA: limita tentativas de login por IP (defesa básica contra brute-force
+// distribuído). O bloqueio real, por conta, é feito abaixo via failedLoginAttempts/
+// lockedUntil no banco — necessário porque funções serverless não compartilham
+// memória entre execuções, então um limitador só em memória não seria confiável aqui.
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+});
+
+const MAX_TENTATIVAS_LOGIN = 5;
+const DURACAO_BLOQUEIO_MS = 15 * 60 * 1000; // 15 minutos
+// Hash "fantasma" usado para equalizar o tempo de resposta quando o e-mail não existe,
+// evitando que a diferença de tempo (com bcrypt x sem bcrypt) revele quais e-mails
+// estão cadastrados (timing attack de enumeração de usuários).
+const HASH_FANTASMA = bcrypt.hashSync('senha_que_nunca_sera_usada', 10);
 
 // ===== Autenticação =====
 function authenticateToken(req, res, next) {
@@ -63,9 +98,20 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Token não fornecido' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Token inválido' });
+    }
+    if (user?.jti) {
+      try {
+        const revogado = await prisma.tokenRevogado.findUnique({ where: { jti: user.jti } });
+        if (revogado) {
+          return res.status(401).json({ error: 'Sessão encerrada. Faça login novamente.' });
+        }
+      } catch (e) {
+        console.error('Erro ao checar token revogado:', e);
+        // Falha na checagem não deve travar todo o sistema; segue autenticado.
+      }
     }
     req.user = user;
     next();
@@ -168,7 +214,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ===== Auth =====
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
@@ -181,17 +227,43 @@ app.post('/api/auth/login', async (req, res) => {
       where: { email: cleanEmail }
     });
 
-    if (!user) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+    // Mensagem de erro sempre genérica (login e "conta bloqueada" usam o mesmo texto
+    // de credenciais inválidas quando possível) para não revelar se o e-mail existe.
+    const ERRO_GENERICO = { error: 'E-mail ou senha inválidos.' };
+
+    if (user?.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+      // Conta temporariamente bloqueada por excesso de tentativas — aqui sim avisamos
+      // explicitamente, já que isso só é possível para contas que de fato existem e
+      // o valor informativo para o dono legítimo da conta supera o pequeno vazamento.
+      return res.status(429).json({ error: 'Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em alguns minutos.' });
     }
 
-    const validPassword = bcrypt.compareSync(String(password), user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+    // Sempre roda o bcrypt (contra um hash real ou um "fantasma"), mesmo quando o
+    // e-mail não existe, para que o tempo de resposta não denuncie quais contas existem.
+    const validPassword = bcrypt.compareSync(String(password), user ? user.password : HASH_FANTASMA);
+
+    if (!user || !validPassword) {
+      if (user) {
+        const tentativas = user.failedLoginAttempts + 1;
+        const bloquear = tentativas >= MAX_TENTATIVAS_LOGIN;
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: bloquear ? 0 : tentativas,
+            lockedUntil: bloquear ? new Date(Date.now() + DURACAO_BLOQUEIO_MS) : null,
+          },
+        });
+      }
+      return res.status(401).json(ERRO_GENERICO);
     }
 
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+    }
+
+    const jti = crypto.randomUUID();
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, jti },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -207,7 +279,24 @@ app.post('/api/auth/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no login:', error);
-    return res.status(500).json({ error: `Falha no login: ${error.message || error}` });
+    return res.status(500).json({ error: 'Erro interno. Tente novamente em instantes.' });
+  }
+});
+
+// Invalida o token atual no servidor (logout real, não só "esquecer" o token no cliente).
+app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.jti && req.user?.exp) {
+      await prisma.tokenRevogado.upsert({
+        where: { jti: req.user.jti },
+        update: {},
+        create: { jti: req.user.jti, expiraEm: new Date(req.user.exp * 1000) },
+      });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao encerrar sessão' });
   }
 });
 
@@ -257,7 +346,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, jti: crypto.randomUUID() },
       JWT_SECRET,
       { expiresIn: '30d' }
     );

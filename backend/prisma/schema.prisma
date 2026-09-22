@@ -32,6 +32,8 @@ model User {
   stripeSubscriptionId String?
   cancelamentoAgendado Boolean  @default(false)
   assinaturaRenovaEm   DateTime?
+  failedLoginAttempts  Int      @default(0)
+  lockedUntil          DateTime?
   subscriptionStatus   String   @default("inactive") // inactive | trial | active | past_due | canceled
   subscriptionTier     String? // starter | pro | business
   maxAlunos            Int      @default(0)
@@ -46,6 +48,13 @@ model User {
   whatsappAutoEnviar   Boolean  @default(false)
   whatsappHoraEnvio    Int      @default(9)
   emailAutoEnviar      Boolean  @default(false)
+}
+
+// Lista de tokens (JWT) revogados no logout — consultada no middleware de autenticação
+// para impedir que um token "deslogado" continue sendo aceito até expirar sozinho.
+model TokenRevogado {
+  jti      String   @id
+  expiraEm DateTime
 }
 
 model Plano {

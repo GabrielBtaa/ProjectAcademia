@@ -393,7 +393,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <span>•</span>
             <button onClick={onOpenRegister} className="hover:text-white">Criar Conta</button>
             <span>•</span>
-            <span>Versão 1.20.0</span>
+            <span>Versão 1.21.0</span>
           </div>
         </div>
       </footer>

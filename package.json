@@ -1,6 +1,6 @@
 {
   "name": "projeto-academia",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "private": true,
   "scripts": {
     "build": "npm run build:frontend && npm run build:backend",
@@ -15,6 +15,7 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-rate-limit": "^7.4.1",
     "jsonwebtoken": "^9.0.3",
     "@prisma/client": "^6.19.0",
     "prisma": "^6.19.0",
