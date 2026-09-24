@@ -245,14 +245,14 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
       </section>
 
       {/* ===== Recursos Principais ===== */}
-      <section className="py-20 bg-gray-950/60 border-y border-gray-800/60">
+      <section className="py-20" style={{ background: 'var(--surface-alt-1)', borderTop: '1px solid var(--border-2)', borderBottom: '1px solid var(--border-2)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto space-y-4">
-            <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>
               Tudo o que sua Academia precisa em um só lugar
             </h2>
-            <p className="text-sm sm:text-base text-gray-400">
+            <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
               Desenvolvido com foco na simplicidade de uso diário de gestores, recepcionistas e proprietários de academias.
             </p>
           </div>
@@ -264,7 +264,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
                 <div
                   key={i}
                   className="rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 shadow-lg"
-                  style={{ background: '#0d1528', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+                  style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
                 >
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
@@ -272,8 +272,8 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
                   >
                     <Icon size={24} style={{ color: rec.color }} />
                   </div>
-                  <h3 className="text-base font-bold text-white mb-2">{rec.title}</h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">{rec.description}</p>
+                  <h3 className="text-base font-bold mb-2" style={{ color: 'var(--text-heading)' }}>{rec.title}</h3>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{rec.description}</p>
                 </div>
               );
             })}
@@ -287,10 +287,10 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>
               Aprovado por Gestores de Fitness de todo o Brasil
             </h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Veja quem já simplificou a gestão e reduziu a inadimplência com o GymFlow.
             </p>
           </div>
@@ -300,7 +300,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
               <div
                 key={i}
                 className="rounded-2xl p-6 flex flex-col justify-between space-y-4"
-                style={{ background: '#0d1528', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+                style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
               >
                 <div className="space-y-3">
                   <div className="flex gap-1">
@@ -308,12 +308,12 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
                       <Star key={s} size={16} className="text-amber-400 fill-amber-400" />
                     ))}
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-300 italic leading-relaxed">
+                  <p className="text-xs sm:text-sm italic leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                     "{dep.texto}"
                   </p>
                 </div>
-                <div className="pt-3 border-t border-gray-800">
-                  <p className="font-bold text-sm text-white">{dep.nome}</p>
+                <div className="pt-3" style={{ borderTop: '1px solid var(--border-2)' }}>
+                  <p className="font-bold text-sm" style={{ color: 'var(--text-heading)' }}>{dep.nome}</p>
                   <p className="text-xs text-blue-400">{dep.cargo}</p>
                 </div>
               </div>
@@ -350,12 +350,12 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
       </section>
 
       {/* ===== FAQ ===== */}
-      <section className="py-16 bg-gray-950/40 border-t border-gray-800">
+      <section className="py-16" style={{ background: 'var(--surface-alt-1)', borderTop: '1px solid var(--border-2)' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold text-white">Perguntas Frequentes</h2>
-            <p className="text-xs text-gray-400">Tire suas dúvidas sobre o teste de 30 dias do GymFlow</p>
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--text-heading)' }}>Perguntas Frequentes</h2>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Tire suas dúvidas sobre o teste de 30 dias do GymFlow</p>
           </div>
 
           <div className="space-y-3">
@@ -363,17 +363,18 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
               <div
                 key={i}
                 className="rounded-xl overflow-hidden transition-all"
-                style={{ background: '#0d1528', border: '1px solid rgba(55, 65, 81, 0.4)' }}
+                style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
               >
                 <button
                   onClick={() => toggleFaq(i)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between text-sm font-semibold text-white hover:text-blue-400 transition-colors"
+                  className="w-full px-6 py-4 text-left flex items-center justify-between text-sm font-semibold hover:text-blue-400 transition-colors"
+                  style={{ color: 'var(--text-heading)' }}
                 >
                   <span>{faq.pergunta}</span>
-                  <ChevronRight size={18} className={`transition-transform duration-200 ${activeFaq === i ? 'rotate-90 text-blue-400' : 'text-gray-400'}`} />
+                  <ChevronRight size={18} className={`transition-transform duration-200 flex-shrink-0 ${activeFaq === i ? 'rotate-90 text-blue-400' : ''}`} style={activeFaq === i ? {} : { color: 'var(--text-muted)' }} />
                 </button>
                 {activeFaq === i && (
-                  <div className="px-6 pb-4 text-xs text-gray-400 leading-relaxed border-t border-gray-800/60 pt-3">
+                  <div className="px-6 pb-4 text-xs leading-relaxed pt-3" style={{ color: 'var(--text-secondary)', borderTop: '1px solid var(--border-2)' }}>
                     {faq.resposta}
                   </div>
                 )}
@@ -385,15 +386,15 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
       </section>
 
       {/* ===== Rodapé ===== */}
-      <footer className="py-8 border-t border-gray-800 text-center text-xs text-gray-500">
+      <footer className="py-8 text-center text-xs" style={{ borderTop: '1px solid var(--border-2)', color: 'var(--text-muted)' }}>
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© {new Date().getFullYear()} GymFlow SaaS. Todos os direitos reservados.</p>
-          <div className="flex items-center gap-4 text-gray-400">
-            <button onClick={onOpenLogin} className="hover:text-white">Login</button>
+          <div className="flex items-center gap-4" style={{ color: 'var(--text-muted)' }}>
+            <button onClick={onOpenLogin} className="hover:text-blue-400 transition-colors">Login</button>
             <span>•</span>
-            <button onClick={onOpenRegister} className="hover:text-white">Criar Conta</button>
+            <button onClick={onOpenRegister} className="hover:text-blue-400 transition-colors">Criar Conta</button>
             <span>•</span>
-            <span>Versão 1.21.0</span>
+            <span>Versão 1.22.0</span>
           </div>
         </div>
       </footer>

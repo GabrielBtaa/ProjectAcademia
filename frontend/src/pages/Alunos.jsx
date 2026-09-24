@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect, memo } from 'react';
 import {
   Search,
   Plus,
@@ -233,7 +233,9 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
 }
 
 // ===== Sub-componente: Card de Aluno (Mobile) =====
-function AlunoCard({ aluno, onEdit, onDelete, podeExcluir = true }) {
+// React.memo evita que TODOS os cards re-renderizem a cada tecla digitada na busca —
+// só o card cujos props (aluno) realmente mudaram é re-renderizado.
+const AlunoCard = memo(function AlunoCard({ aluno, onEdit, onDelete, podeExcluir = true }) {
   const diasRestantes = () => {
     const hoje = new Date();
     const venc = new Date(aluno.dataVencimento + 'T12:00:00');
@@ -282,11 +284,11 @@ function AlunoCard({ aluno, onEdit, onDelete, podeExcluir = true }) {
           </span>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => onEdit(aluno)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#60a5fa' }}>
+          <button onClick={() => onEdit(aluno)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#60a5fa' }} aria-label={`Editar ${aluno.nome}`} title="Editar">
             <Edit2 size={14} />
           </button>
           {podeExcluir && (
-            <button onClick={() => onDelete(aluno.id)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#f87171' }}>
+            <button onClick={() => onDelete(aluno.id)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#f87171' }} aria-label={`Excluir ${aluno.nome}`} title="Excluir">
               <Trash2 size={14} />
             </button>
           )}
@@ -294,7 +296,7 @@ function AlunoCard({ aluno, onEdit, onDelete, podeExcluir = true }) {
       </div>
     </div>
   );
-}
+});
 
 /**
  * Página de Gestão de Alunos
@@ -426,10 +428,10 @@ export default function Alunos({ searchTerm = '' }) {
   };
 
   // Abre modal para editar
-  const handleEditar = (aluno) => {
+  const handleEditar = useCallback((aluno) => {
     setAlunoEditando(aluno);
     setModalAberto(true);
-  };
+  }, []);
 
   // Salva aluno (novo ou editado)
   const handleSalvar = async (dadosAluno) => {
@@ -471,7 +473,7 @@ export default function Alunos({ searchTerm = '' }) {
   };
 
   // Exclui aluno (com confirmação)
-  const handleExcluir = async (id) => {
+  const handleExcluir = useCallback(async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir este aluno?')) return;
     try {
       const res = await apiFetch((`/api/alunos/${id}`), { method: 'DELETE' });
@@ -484,7 +486,7 @@ export default function Alunos({ searchTerm = '' }) {
     } catch (e) {
       alert(e.message || 'Erro ao excluir');
     }
-  };
+  }, []);
 
   return (
     <div className="p-4 lg:p-6 space-y-5 page-enter">
@@ -673,6 +675,7 @@ export default function Alunos({ searchTerm = '' }) {
                           className="p-1.5 rounded-lg transition-all"
                           style={{ color: '#60a5fa', background: 'rgba(37, 99, 235, 0.1)' }}
                           title="Editar"
+                          aria-label={`Editar ${aluno.nome}`}
                         >
                           <Edit2 size={14} />
                         </button>
@@ -682,6 +685,7 @@ export default function Alunos({ searchTerm = '' }) {
                             className="p-1.5 rounded-lg transition-all"
                             style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
                             title="Excluir"
+                            aria-label={`Excluir ${aluno.nome}`}
                           >
                             <Trash2 size={14} />
                           </button>

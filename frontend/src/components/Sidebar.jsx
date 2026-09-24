@@ -125,7 +125,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
           </div>
 
           {/* Botão de fechar (mobile) */}
-          <button onClick={onClose} className="lg:hidden ml-auto text-gray-400 hover:text-gray-600 transition-colors p-1">
+          <button onClick={onClose} className="lg:hidden ml-auto text-gray-400 hover:text-gray-600 transition-colors p-1" aria-label="Fechar menu">
             <X size={18} />
           </button>
 
@@ -135,6 +135,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg items-center justify-center shadow-sm transition-colors"
             style={{ background: bg, border, color: textMuted }}
             title={colapsada ? 'Expandir menu' : 'Recolher menu'}
+            aria-label={colapsada ? 'Expandir menu' : 'Recolher menu'}
           >
             <PanelLeft size={14} />
           </button>
@@ -177,6 +178,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             <button
               onClick={toggleTheme}
               title={colapsada ? (isLight ? 'Modo escuro' : 'Modo claro') : undefined}
+              aria-label={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
               className="sb-theme-toggle w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200"
               style={{ color: textNavDefault }}
               onMouseEnter={(e) => { e.currentTarget.style.background = surfaceHover; e.currentTarget.style.color = isLight ? '#0f172a' : '#e5e7eb'; }}
@@ -222,6 +224,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
               className="sb-hide-when-collapsed flex-shrink-0 p-1.5 rounded-lg transition-colors"
               style={{ color: textMuted }}
               title="Sair"
+              aria-label="Sair da conta"
             >
               <LogOut size={15} />
             </button>
@@ -231,7 +234,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
             style={{ background: isLight ? 'rgba(37, 99, 235, 0.06)' : 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.21.0</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.22.0</p>
           </div>
         </div>
       </aside>
