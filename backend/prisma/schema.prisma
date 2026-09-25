@@ -34,6 +34,7 @@ model User {
   assinaturaRenovaEm   DateTime?
   failedLoginAttempts  Int      @default(0)
   lockedUntil          DateTime?
+  ultimoEnvioAutomaticoEm DateTime?
   subscriptionStatus   String   @default("inactive") // inactive | trial | active | past_due | canceled
   subscriptionTier     String? // starter | pro | business
   maxAlunos            Int      @default(0)

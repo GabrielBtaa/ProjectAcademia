@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Dumbbell, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { Dumbbell, ShieldCheck, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, Sun, Moon, Mail, Lock, Phone, User } from 'lucide-react';
 import { apiUrl } from '../lib/api';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -19,7 +19,7 @@ const MODELOS_NEGOCIO = [
  * crossfade entre a versão login/cadastro — mais simples e robusto que
  * animar 4 painéis independentes.
  */
-export default function AuthCard({ modoInicial = 'login' }) {
+export default function AuthCard({ modoInicial = 'login', onVoltar }) {
   const [modoCadastro, setModoCadastro] = useState(modoInicial === 'cadastro');
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === 'light';
@@ -29,10 +29,23 @@ export default function AuthCard({ modoInicial = 'login' }) {
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{ background: 'var(--bg-page)' }}
     >
+      {onVoltar && (
+        <button
+          type="button"
+          onClick={onVoltar}
+          className="absolute top-5 left-5 z-10 flex items-center gap-2 px-4 h-10 rounded-full transition-colors text-sm font-medium"
+          style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)', color: 'var(--text-secondary)' }}
+          aria-label="Voltar para a página inicial"
+        >
+          <ArrowLeft size={16} />
+          <span className="hidden sm:inline">Voltar</span>
+        </button>
+      )}
       <button
         type="button"
         onClick={toggleTheme}
         title={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
+        aria-label={isLight ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
         className="absolute top-5 right-5 z-10 flex items-center justify-center w-10 h-10 rounded-full transition-colors"
         style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)', color: 'var(--text-secondary)' }}
       >
@@ -78,9 +91,12 @@ export default function AuthCard({ modoInicial = 'login' }) {
         .authcard-toggle-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 
         .authcard-input { width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
+        .authcard-input.has-icon { padding-left: 40px; }
         .authcard-input::placeholder { color: var(--text-muted); }
         .authcard-input:focus { outline: none; border-color: #3b82f6; background: var(--surface-alt-2); }
         .authcard-label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
+        .authcard-input-wrap { position: relative; display: flex; align-items: center; }
+        .authcard-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; display: flex; }
 
         @media (max-width: 760px) {
           .authcard { height: auto; min-height: 0; }
@@ -165,11 +181,17 @@ function FormLogin({ onIrCadastro }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="authcard-label">Email</label>
-          <input type="email" required className="authcard-input" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+          <div className="authcard-input-wrap">
+            <span className="authcard-input-icon"><Mail size={15} /></span>
+            <input type="email" required className="authcard-input has-icon" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
         </div>
         <div>
           <label className="authcard-label">Senha</label>
-          <input type="password" required className="authcard-input" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+          <div className="authcard-input-wrap">
+            <span className="authcard-input-icon"><Lock size={15} /></span>
+            <input type="password" required className="authcard-input has-icon" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+          </div>
         </div>
 
         {error && (
@@ -249,24 +271,36 @@ function FormCadastro({ onVoltarLogin }) {
       <form onSubmit={handleSubmit} className="space-y-2.5">
         <div>
           <label className="authcard-label">Nome Completo *</label>
-          <input className="authcard-input" required placeholder="Ex: Gabriel Silva" value={form.nome} onChange={e => handleChange('nome', e.target.value)} />
+          <div className="authcard-input-wrap">
+            <span className="authcard-input-icon"><User size={15} /></span>
+            <input className="authcard-input has-icon" required placeholder="Ex: Gabriel Silva" value={form.nome} onChange={e => handleChange('nome', e.target.value)} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="authcard-label">Seu Email *</label>
-            <input type="email" className="authcard-input" required placeholder="seu@email.com" value={form.email} onChange={e => handleChange('email', e.target.value)} />
+            <div className="authcard-input-wrap">
+              <span className="authcard-input-icon"><Mail size={15} /></span>
+              <input type="email" className="authcard-input has-icon" required placeholder="seu@email.com" value={form.email} onChange={e => handleChange('email', e.target.value)} />
+            </div>
           </div>
           <div>
             <label className="authcard-label">Confirmar Email *</label>
-            <input type="email" className="authcard-input" required placeholder="Repita seu email" value={form.confirmarEmail} onChange={e => handleChange('confirmarEmail', e.target.value)} />
+            <div className="authcard-input-wrap">
+              <span className="authcard-input-icon"><Mail size={15} /></span>
+              <input type="email" className="authcard-input has-icon" required placeholder="Repita seu email" value={form.confirmarEmail} onChange={e => handleChange('confirmarEmail', e.target.value)} />
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="authcard-label">Celular / WhatsApp *</label>
-            <input type="tel" className="authcard-input" required placeholder="(11) 99999-9999" value={form.celular} onChange={e => handleChange('celular', e.target.value)} />
+            <div className="authcard-input-wrap">
+              <span className="authcard-input-icon"><Phone size={15} /></span>
+              <input type="tel" className="authcard-input has-icon" required placeholder="(11) 99999-9999" value={form.celular} onChange={e => handleChange('celular', e.target.value)} />
+            </div>
           </div>
           <div>
             <label className="authcard-label">Modelo de Negócio *</label>
@@ -279,11 +313,17 @@ function FormCadastro({ onVoltarLogin }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="authcard-label">Senha de Acesso *</label>
-            <input type="password" className="authcard-input" required placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => handleChange('password', e.target.value)} />
+            <div className="authcard-input-wrap">
+              <span className="authcard-input-icon"><Lock size={15} /></span>
+              <input type="password" className="authcard-input has-icon" required placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => handleChange('password', e.target.value)} />
+            </div>
           </div>
           <div>
             <label className="authcard-label">Confirmar Senha *</label>
-            <input type="password" className="authcard-input" required placeholder="Repita sua senha" value={form.confirmarSenha} onChange={e => handleChange('confirmarSenha', e.target.value)} />
+            <div className="authcard-input-wrap">
+              <span className="authcard-input-icon"><Lock size={15} /></span>
+              <input type="password" className="authcard-input has-icon" required placeholder="Repita sua senha" value={form.confirmarSenha} onChange={e => handleChange('confirmarSenha', e.target.value)} />
+            </div>
           </div>
         </div>
 

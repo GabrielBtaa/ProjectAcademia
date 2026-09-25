@@ -1259,30 +1259,43 @@ app.get('/api/cron/whatsapp-diario', async (req, res) => {
     return res.status(401).json({ error: 'Não autorizado' });
   }
   try {
-    // O cron da Vercel roda 1x por hora (ver vercel.json). Aqui filtramos só os
-    // usuários cujo horário configurado (whatsappHoraEnvio, fuso de Brasília)
-    // bate com a hora atual, para respeitar o horário escolhido por cada academia.
-    const OFFSET_BRASILIA = 3; // UTC-3
-    const horaAtualBrasilia = (new Date().getUTCHours() - OFFSET_BRASILIA + 24) % 24;
+    // O robô roda de hora em hora (GitHub Actions), mas o GitHub NÃO garante que a
+    // execução comece exatamente no minuto 0 — em horários de pico pode atrasar vários
+    // minutos, ou raramente pular uma execução inteira. Por isso NÃO exigimos que a
+    // hora atual seja EXATAMENTE igual à configurada: verificamos se a hora configurada
+    // já passou hoje E se ainda não foi enviado hoje. Isso faz o robô "se recuperar"
+    // sozinho na próxima execução, mesmo que tenha perdido a hora certa por atraso.
+    const OFFSET_BRASILIA = 3; // UTC-3 (Brasil não usa horário de verão desde 2019)
+    const agora = new Date();
+    const horaAtualBrasilia = (agora.getUTCHours() - OFFSET_BRASILIA + 24) % 24;
+    // "Hoje" no fuso de Brasília, como string AAAA-MM-DD, para comparar dia sem hora/fuso.
+    const agoraBrasilia = new Date(agora.getTime() - OFFSET_BRASILIA * 60 * 60 * 1000);
+    const hojeBrasiliaStr = agoraBrasilia.toISOString().slice(0, 10);
 
     const todosAutoEnviar = await prisma.user.findMany({
       where: { OR: [{ whatsappAutoEnviar: true }, { emailAutoEnviar: true }] },
     });
     const usuarios = todosAutoEnviar.filter(u => {
       const horaConfigurada = typeof u.whatsappHoraEnvio === 'number' ? u.whatsappHoraEnvio : 9;
-      return horaConfigurada === horaAtualBrasilia;
+      if (horaAtualBrasilia < horaConfigurada) return false; // ainda não chegou a hora hoje
+
+      if (!u.ultimoEnvioAutomaticoEm) return true;
+      const ultimoEnvioBrasilia = new Date(new Date(u.ultimoEnvioAutomaticoEm).getTime() - OFFSET_BRASILIA * 60 * 60 * 1000);
+      const ultimoEnvioStr = ultimoEnvioBrasilia.toISOString().slice(0, 10);
+      return ultimoEnvioStr !== hojeBrasiliaStr; // só dispara se ainda não enviou hoje
     });
 
     const resultados = [];
     for (const u of usuarios) {
       try {
         const r = await dispararNotificacoesParaUsuario(u.id, 'cron');
+        await prisma.user.update({ where: { id: u.id }, data: { ultimoEnvioAutomaticoEm: agora } });
         resultados.push({ userId: u.id, enviados: r.logsExecucao.filter(l => l.status === 'sucesso').length });
       } catch (e) {
         resultados.push({ userId: u.id, erro: e.message });
       }
     }
-    res.json({ ok: true, horaAtualBrasilia, contasElegiveis: usuarios.length, contasComAutoEnvio: todosAutoEnviar.length, resultados });
+    res.json({ ok: true, horaAtualBrasilia, hojeBrasiliaStr, contasElegiveis: usuarios.length, contasComAutoEnvio: todosAutoEnviar.length, resultados });
   } catch (err) {
     console.error('Erro no robô diário:', err);
     res.status(500).json({ error: 'Falha no robô diário' });

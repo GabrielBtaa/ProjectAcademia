@@ -117,7 +117,7 @@ function AppContent() {
   // Mostrar Landing Page, Login ou Registro se não estiver autenticado
   if (!user) {
     if (authView === 'login' || authView === 'register') {
-      return <AuthCard modoInicial={authView === 'register' ? 'cadastro' : 'login'} />;
+      return <AuthCard modoInicial={authView === 'register' ? 'cadastro' : 'login'} onVoltar={() => setAuthView('landing')} />;
     }
     return (
       <LandingPage
