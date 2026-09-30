@@ -12,6 +12,9 @@ import {
   X,
   Check,
   AlertCircle,
+  Upload,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { gerarLinkWhatsApp } from '../lib/whatsapp';
@@ -235,6 +238,122 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
 // ===== Sub-componente: Card de Aluno (Mobile) =====
 // React.memo evita que TODOS os cards re-renderizem a cada tecla digitada na busca —
 // só o card cujos props (aluno) realmente mudaram é re-renderizado.
+// Modal de importação de alunos via CSV
+function ImportarCsvModal({ onClose, onImportado }) {
+  const inputRef = useRef(null);
+  const [arquivo, setArquivo] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [resultado, setResultado] = useState(null);
+
+  const baixarModelo = () => {
+    const conteudo = 'nome,cpf,whatsapp,email,dataNascimento,plano,dataVencimento\n' +
+      'Maria Silva,12345678900,11999999999,maria@email.com,15/03/1995,Mensal,10/10/2026\n';
+    const blob = new Blob([conteudo], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'modelo-importacao-alunos.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleEnviar = async () => {
+    if (!arquivo) return;
+    setEnviando(true);
+    setErro(null);
+    try {
+      const formData = new FormData();
+      formData.append('arquivo', arquivo);
+      const res = await apiFetch('/api/alunos/importar-csv', { method: 'POST', body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro ao importar arquivo');
+      setResultado(data);
+      if (data.criados > 0) onImportado();
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-2)' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-2)' }}>
+          <h3 className="font-bold text-base" style={{ color: 'var(--text-heading)' }}>Importar Alunos via CSV</h3>
+          <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--text-muted)' }} aria-label="Fechar">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {!resultado && (
+            <>
+              <div className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                <p>O arquivo precisa ter as colunas: <strong>nome, cpf, whatsapp, email (opcional), dataNascimento, plano, dataVencimento</strong>.</p>
+                <p>Datas no formato DD/MM/AAAA. O nome do plano precisa ser exatamente igual a um plano já cadastrado.</p>
+              </div>
+
+              <button type="button" onClick={baixarModelo} className="text-xs font-semibold flex items-center gap-1.5 text-blue-400 hover:underline">
+                <Download size={13} /> Baixar modelo de exemplo
+              </button>
+
+              <div
+                className="rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors"
+                style={{ borderColor: 'var(--border-2)' }}
+                onClick={() => inputRef.current?.click()}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={e => setArquivo(e.target.files?.[0] || null)}
+                />
+                <Upload size={22} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  {arquivo ? arquivo.name : 'Clique para escolher o arquivo .csv'}
+                </p>
+              </div>
+
+              {erro && <p className="text-xs" style={{ color: '#f87171' }}>{erro}</p>}
+
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
+                <button type="button" onClick={handleEnviar} disabled={!arquivo || enviando} className="btn-primary flex-1 justify-center">
+                  {enviando ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                  {enviando ? 'Importando...' : 'Importar'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {resultado && (
+            <div className="space-y-3">
+              <div className="flex gap-4 text-sm">
+                <span style={{ color: '#22c55e' }}>{resultado.criados} importado(s) com sucesso</span>
+                <span style={{ color: '#f87171' }}>{resultado.comErro} com erro</span>
+              </div>
+              {resultado.comErro > 0 && (
+                <div className="max-h-56 overflow-y-auto rounded-lg" style={{ border: '1px solid var(--border-2)' }}>
+                  {resultado.relatorio.filter(r => r.status === 'erro').map((r, i) => (
+                    <div key={i} className="px-3 py-2 text-xs flex items-start gap-2" style={{ borderTop: i > 0 ? '1px solid var(--border-2)' : 'none' }}>
+                      <AlertCircle size={13} className="flex-shrink-0 mt-0.5" style={{ color: '#f87171' }} />
+                      <span style={{ color: 'var(--text-secondary)' }}><strong>Linha {r.linha}</strong> ({r.nome}): {r.motivo}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button type="button" onClick={onClose} className="btn-primary w-full justify-center">Fechar</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const AlunoCard = memo(function AlunoCard({ aluno, onEdit, onDelete, podeExcluir = true }) {
   const diasRestantes = () => {
     const hoje = new Date();
@@ -341,6 +460,7 @@ export default function Alunos({ searchTerm = '' }) {
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalImportarAberto, setModalImportarAberto] = useState(false);
   const [alunoEditando, setAlunoEditando] = useState(null);
 
   // ===== Itens por página dinâmico =====
@@ -518,15 +638,33 @@ export default function Alunos({ searchTerm = '' }) {
             </p>
           )}
         </div>
-        <button
-          onClick={handleNovoAluno}
-          className="btn-primary"
-          disabled={carregando || !!erroApi || !planos.length}
-        >
-          <Plus size={16} />
-          Novo Aluno
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModalImportarAberto(true)}
+            className="btn-secondary"
+            disabled={carregando || !!erroApi || !planos.length}
+            title="Importar alunos de uma planilha CSV"
+          >
+            <Upload size={16} />
+            <span className="hidden sm:inline">Importar CSV</span>
+          </button>
+          <button
+            onClick={handleNovoAluno}
+            className="btn-primary"
+            disabled={carregando || !!erroApi || !planos.length}
+          >
+            <Plus size={16} />
+            Novo Aluno
+          </button>
+        </div>
       </div>
+
+      {modalImportarAberto && (
+        <ImportarCsvModal
+          onClose={() => setModalImportarAberto(false)}
+          onImportado={() => { setModalImportarAberto(false); carregarDados(); }}
+        />
+      )}
 
       {/* ===== Barra de Busca + Filtros ===== */}
       <div className="flex flex-col sm:flex-row gap-3">

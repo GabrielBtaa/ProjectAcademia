@@ -12,8 +12,11 @@ export function apiUrl(path) {
  */
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('token');
+  // Para envio de arquivo (FormData), o navegador precisa definir o Content-Type
+  // sozinho (com o boundary correto) — forçar 'application/json' aqui quebraria o upload.
+  const ehFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.body && !ehFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };

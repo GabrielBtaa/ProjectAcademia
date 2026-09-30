@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -569,6 +570,166 @@ app.get('/api/alunos', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao listar alunos' });
+  }
+});
+
+// ===== Importação de alunos via CSV =====
+const uploadCsv = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB é mais que suficiente para uma planilha de alunos
+});
+
+// Parser de CSV simples e robusto (sem dependência externa), lida com campos entre aspas
+// contendo vírgula, e aceita separador ; ou , (comum em CSV exportado do Excel PT-BR).
+function parseCsvTexto(texto) {
+  const linhasBrutas = texto.replace(/\r\n/g, '\n').split('\n').filter(l => l.trim() !== '');
+  if (linhasBrutas.length === 0) return { cabecalho: [], linhas: [] };
+
+  const separador = linhasBrutas[0].includes(';') && !linhasBrutas[0].includes(',') ? ';' : ',';
+
+  function parseLinha(linha) {
+    const campos = [];
+    let atual = '';
+    let dentroAspas = false;
+    for (let i = 0; i < linha.length; i++) {
+      const c = linha[i];
+      if (c === '"') {
+        dentroAspas = !dentroAspas;
+      } else if (c === separador && !dentroAspas) {
+        campos.push(atual.trim());
+        atual = '';
+      } else {
+        atual += c;
+      }
+    }
+    campos.push(atual.trim());
+    return campos;
+  }
+
+  const cabecalho = parseLinha(linhasBrutas[0]).map(h => h.toLowerCase().trim());
+  const linhas = linhasBrutas.slice(1).map(parseLinha);
+  return { cabecalho, linhas };
+}
+
+// Aceita DD/MM/AAAA (padrão brasileiro) ou AAAA-MM-DD (ISO)
+function parseDataFlexivel(str) {
+  if (!str) return null;
+  const s = str.trim();
+  const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (br) {
+    const [, d, m, a] = br;
+    return `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const [, a, m, d] = iso;
+    return `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  return null;
+}
+
+app.post('/api/alunos/importar-csv', uploadCsv.single('arquivo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado (campo esperado: "arquivo")' });
+    }
+
+    const texto = req.file.buffer.toString('utf-8');
+    const { cabecalho, linhas } = parseCsvTexto(texto);
+
+    const colunasEsperadas = ['nome', 'cpf', 'whatsapp', 'email', 'datanascimento', 'plano', 'datavencimento'];
+    const indice = {};
+    for (const col of colunasEsperadas) indice[col] = cabecalho.indexOf(col);
+
+    if (indice.nome === -1 || indice.cpf === -1 || indice.whatsapp === -1 || indice.datanascimento === -1 || indice.plano === -1 || indice.datavencimento === -1) {
+      return res.status(400).json({
+        error: 'Cabeçalho do CSV inválido. Colunas obrigatórias: nome, cpf, whatsapp, dataNascimento, plano, dataVencimento (email é opcional).',
+      });
+    }
+
+    // Limite do plano de assinatura: conta quantos alunos já existem + quantos essa
+    // importação tentaria criar, e corta antes de estourar o limite do tier contratado.
+    const usuario = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const totalAtual = await prisma.aluno.count({ where: { ownerId: req.user.id } });
+    const limite = usuario?.maxAlunos ?? 9999;
+
+    const planosDoUsuario = await prisma.plano.findMany({ where: { ownerId: req.user.id } });
+    const planoPorNome = new Map(planosDoUsuario.map(p => [p.nome.trim().toLowerCase(), p]));
+
+    const cpfsVistosNoArquivo = new Set();
+    const relatorio = [];
+    let criados = 0;
+
+    for (let i = 0; i < linhas.length; i++) {
+      const numeroLinha = i + 2; // +2: linha 1 é o cabeçalho, e planilhas contam a partir de 1
+      const campos = linhas[i];
+      const nome = campos[indice.nome]?.trim();
+      const cpf = campos[indice.cpf]?.replace(/\D/g, '');
+      const whatsapp = campos[indice.whatsapp]?.replace(/\D/g, '');
+      const email = indice.email !== -1 ? campos[indice.email]?.trim() : '';
+      const nomePlano = campos[indice.plano]?.trim();
+      const dataNascStr = parseDataFlexivel(campos[indice.datanascimento]);
+      const dataVencStr = parseDataFlexivel(campos[indice.datavencimento]);
+
+      const erros = [];
+      if (!nome) erros.push('nome é obrigatório');
+      if (!cpf || cpf.length !== 11) erros.push('CPF inválido (precisa ter 11 dígitos)');
+      if (!whatsapp) erros.push('WhatsApp é obrigatório');
+      if (!dataNascStr) erros.push('data de nascimento inválida (use DD/MM/AAAA)');
+      if (!dataVencStr) erros.push('data de vencimento inválida (use DD/MM/AAAA)');
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) erros.push('e-mail inválido');
+
+      const plano = nomePlano ? planoPorNome.get(nomePlano.toLowerCase()) : null;
+      if (!nomePlano) erros.push('plano é obrigatório');
+      else if (!plano) erros.push(`plano "${nomePlano}" não encontrado (confira o nome exato de um plano já cadastrado)`);
+
+      if (cpf) {
+        if (cpfsVistosNoArquivo.has(cpf)) erros.push('CPF duplicado dentro do próprio arquivo');
+        cpfsVistosNoArquivo.add(cpf);
+      }
+
+      if (erros.length > 0) {
+        relatorio.push({ linha: numeroLinha, nome: nome || '(vazio)', status: 'erro', motivo: erros.join('; ') });
+        continue;
+      }
+
+      if (totalAtual + criados >= limite) {
+        relatorio.push({ linha: numeroLinha, nome, status: 'erro', motivo: `Limite de ${limite} alunos do seu plano atingido — linha não importada` });
+        continue;
+      }
+
+      try {
+        await prisma.aluno.create({
+          data: {
+            nome,
+            cpf,
+            whatsapp,
+            email: email || null,
+            dataNascimento: new Date(dataNascStr + 'T12:00:00'),
+            dataVencimento: new Date(dataVencStr + 'T12:00:00'),
+            planoId: plano.id,
+            status: 'ativo',
+            avatar: avatarFromNome(nome),
+            ownerId: req.user.id,
+          },
+        });
+        criados++;
+        relatorio.push({ linha: numeroLinha, nome, status: 'sucesso', motivo: null });
+      } catch (e) {
+        const motivo = e.code === 'P2002' ? 'CPF já cadastrado nesta conta' : (e.message || 'erro ao salvar');
+        relatorio.push({ linha: numeroLinha, nome, status: 'erro', motivo });
+      }
+    }
+
+    res.json({
+      totalLinhas: linhas.length,
+      criados,
+      comErro: relatorio.filter(r => r.status === 'erro').length,
+      relatorio,
+    });
+  } catch (e) {
+    console.error('Erro ao importar CSV:', e);
+    res.status(500).json({ error: 'Erro ao processar o arquivo CSV' });
   }
 });
 
