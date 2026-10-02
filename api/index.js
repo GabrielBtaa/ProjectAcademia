@@ -1109,11 +1109,14 @@ app.post('/api/billing/cancelar', authenticateToken, async (req, res) => {
   }
   try {
     const sub = await stripe.subscriptions.update(user.stripeSubscriptionId, { cancel_at_period_end: true });
+    const { motivo } = req.body || {};
     await prisma.user.update({
       where: { id: user.id },
       data: {
         cancelamentoAgendado: true,
         assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+        motivoCancelamento: motivo || null,
+        canceledAt: new Date(),
       },
     });
     res.json({ ok: true, assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null });
@@ -1215,6 +1218,8 @@ app.post('/api/billing/webhook', async (req, res) => {
             subscriptionStatus: ativo ? 'active' : (sub.status === 'past_due' ? 'past_due' : 'canceled'),
             cancelamentoAgendado: !!sub.cancel_at_period_end,
             assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+        motivoCancelamento: motivo || null,
+        canceledAt: new Date(),
           },
         });
       }

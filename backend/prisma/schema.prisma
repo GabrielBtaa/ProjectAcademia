@@ -49,6 +49,8 @@ model User {
   whatsappAutoEnviar   Boolean  @default(false)
   whatsappHoraEnvio    Int      @default(9)
   emailAutoEnviar      Boolean  @default(false)
+  motivoCancelamento   String?  @db.Text
+  canceledAt           DateTime?
 }
 
 // Lista de tokens (JWT) revogados no logout — consultada no middleware de autenticação

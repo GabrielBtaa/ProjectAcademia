@@ -152,6 +152,7 @@ export default function Configuracoes() {
   // ===== Assinatura =====
   const [billingStatus, setBillingStatus] = useState(null);
   const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false);
+  const [motivoCancelamento, setMotivoCancelamento] = useState('');
   const [processandoAssinatura, setProcessandoAssinatura] = useState(false);
   const [erroAssinatura, setErroAssinatura] = useState(null);
 
@@ -166,7 +167,7 @@ export default function Configuracoes() {
     setProcessandoAssinatura(true);
     setErroAssinatura(null);
     try {
-      const res = await apiFetch('/api/billing/cancelar', { method: 'POST' });
+      const res = await apiFetch('/api/billing/cancelar', { method: 'POST', body: JSON.stringify({ motivo: motivoCancelamento }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Erro ao cancelar assinatura');
       setBillingStatus(prev => ({ ...prev, cancelamentoAgendado: true, assinaturaRenovaEm: data.assinaturaRenovaEm }));
