@@ -10,6 +10,7 @@ import {
   PanelLeft,
   Sun,
   Moon,
+  BarChart3,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,13 +33,16 @@ function getSiglaUsuario(nome) {
   return (p1 + p2).toUpperCase() || 'US';
 }
 
-export default function Sidebar({ activePage, setActivePage, isOpen, onClose, colapsada, onToggleColapsada }) {
+export default function Sidebar({ activePage, setActivePage, isOpen, onClose, colapsada, onToggleColapsada, isPlatformOwner = false }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const { isRecepcionista } = useViewMode();
   const isLight = theme === 'light';
   const [nomeAcademia, setNomeAcademia] = useState('GymFlow');
-  const navItems = isRecepcionista ? NAV_ITEMS.filter(i => i.id !== 'configuracoes') : NAV_ITEMS;
+  const itensBase = isRecepcionista ? NAV_ITEMS.filter(i => i.id !== 'configuracoes') : NAV_ITEMS;
+  const navItems = isPlatformOwner
+    ? [...itensBase, { id: 'plataforma', label: 'Métricas (SaaS)', icon: BarChart3 }]
+    : itensBase;
 
   useEffect(() => {
     const carregarNome = () => {
@@ -234,7 +238,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
             style={{ background: isLight ? 'rgba(37, 99, 235, 0.06)' : 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.25.0</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.26.1</p>
           </div>
         </div>
       </aside>

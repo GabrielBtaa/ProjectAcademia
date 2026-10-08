@@ -16,6 +16,27 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 const app = express();
 
+// A Vercel roda a API atrás de um proxy reverso, que define o header X-Forwarded-For
+// com o IP real de quem fez a requisição. Sem isso, o express-rate-limit não confia
+// nesse header (por segurança, já que ele pode ser falsificado em outros ambientes) e
+// lança um erro a cada requisição. "1" diz pra confiar apenas no primeiro proxy à frente
+// (o da própria Vercel), que é o cenário correto aqui.
+app.set('trust proxy', 1);
+
+// Captura de erros em produção (opcional — só ativa se SENTRY_DSN estiver configurado).
+// Sem a env var, isso é um no-op completo e não afeta nada.
+let Sentry = null;
+if (process.env.SENTRY_DSN) {
+  Sentry = require('@sentry/node');
+  Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
+}
+// Loga no console (sempre) e manda pro Sentry também, se configurado. Usar esta função
+// nos pontos mais críticos (login, pagamentos, cron) em vez de console.error puro.
+function logErro(contexto, erro) {
+  console.error(contexto, erro);
+  if (Sentry) Sentry.captureException(erro, { extra: { contexto } });
+}
+
 // Instalações antigas podem ter sido criadas antes da tabela de pagamentos
 // existir. Mantemos este ajuste idempotente para que o deploy não deixe a
 // área financeira indisponível ao encontrar uma base legada.
@@ -70,6 +91,17 @@ if (!process.env.FRONTEND_ORIGIN) {
 
 app.use(cors({ origin: corsOrigins }));
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+
+// Health check público (sem autenticação) para serviços de monitoramento externo
+// (UptimeRobot, BetterStack, etc.) confirmarem que a API e o banco estão respondendo.
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, db: 'connected', timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.status(503).json({ ok: false, db: 'disconnected', error: e.message });
+  }
+});
 
 // SEGURANÇA: limita tentativas de login por IP (defesa básica contra brute-force
 // distribuído). O bloqueio real, por conta, é feito abaixo via failedLoginAttempts/
@@ -261,6 +293,8 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     if (user.failedLoginAttempts > 0 || user.lockedUntil) {
       await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
     }
+    // Não bloqueia o login por causa disso — atualização de "presença" é best-effort.
+    prisma.user.update({ where: { id: user.id }, data: { ultimoAcessoEm: new Date() } }).catch(() => {});
 
     const jti = crypto.randomUUID();
     const token = jwt.sign(
@@ -279,7 +313,7 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro no login:', error);
+    logErro('Erro no login', error);
     return res.status(500).json({ error: 'Erro interno. Tente novamente em instantes.' });
   }
 });
@@ -721,6 +755,8 @@ app.post('/api/alunos/importar-csv', uploadCsv.single('arquivo'), async (req, re
       }
     }
 
+    if (criados > 0) marcarPrimeiroAlunoSeNecessario(req.user.id);
+
     res.json({
       totalLinhas: linhas.length,
       criados,
@@ -732,6 +768,19 @@ app.post('/api/alunos/importar-csv', uploadCsv.single('arquivo'), async (req, re
     res.status(500).json({ error: 'Erro ao processar o arquivo CSV' });
   }
 });
+
+// Marca o timestamp do primeiro aluno cadastrado (só na primeira vez) — usado para medir
+// o tempo de onboarding (roadmap item 2). Best-effort: nunca deve travar o fluxo principal.
+async function marcarPrimeiroAlunoSeNecessario(ownerId) {
+  try {
+    const usuario = await prisma.user.findUnique({ where: { id: ownerId }, select: { primeiroAlunoCadastradoEm: true } });
+    if (usuario && !usuario.primeiroAlunoCadastradoEm) {
+      await prisma.user.update({ where: { id: ownerId }, data: { primeiroAlunoCadastradoEm: new Date() } });
+    }
+  } catch (e) {
+    console.error('Erro ao marcar primeiro aluno cadastrado:', e);
+  }
+}
 
 app.post('/api/alunos', async (req, res) => {
   const {
@@ -776,6 +825,7 @@ app.post('/api/alunos', async (req, res) => {
       },
       include: { plano: true },
     });
+    marcarPrimeiroAlunoSeNecessario(req.user.id);
     res.status(201).json(serializeAluno(created));
   } catch (e) {
     if (e.code === 'P2002') {
@@ -1050,6 +1100,9 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
   }
 
   try {
+    const usuarioAntes = await prisma.user.findUnique({ where: { id: req.user.id }, select: { automacaoConfiguradaEm: true } });
+    const ligandoAutomacaoAgora = (whatsappAutoEnviar === true || emailAutoEnviar === true) && !usuarioAntes?.automacaoConfiguradaEm;
+
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data: {
@@ -1063,6 +1116,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
         whatsappAutoEnviar: typeof whatsappAutoEnviar === 'boolean' ? whatsappAutoEnviar : undefined,
         whatsappHoraEnvio: horaEnvioValida,
         emailAutoEnviar: typeof emailAutoEnviar === 'boolean' ? emailAutoEnviar : undefined,
+        automacaoConfiguradaEm: ligandoAutomacaoAgora ? new Date() : undefined,
       },
     });
     res.json({
@@ -1076,10 +1130,60 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
       whatsappAutoEnviar: updated.whatsappAutoEnviar,
       whatsappHoraEnvio: updated.whatsappHoraEnvio,
       emailAutoEnviar: updated.emailAutoEnviar,
+      automacaoConfiguradaAgora: ligandoAutomacaoAgora,
     });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao salvar dados da academia' });
+  }
+});
+
+// Métricas da plataforma como um todo (todos os clientes), não da academia de um cliente.
+// Protegido por uma env var própria (PLATFORM_ADMIN_EMAIL) — nenhum cliente, mesmo com
+// role 'admin' na própria academia dele, consegue ver dados de negócio de outros clientes.
+const PRECOS_POR_PLANO = { starter: 250, pro: 400, business: 600 }; // ajuste conforme seus preços reais
+
+app.get('/api/plataforma/metricas', authenticateToken, async (req, res) => {
+  if (!process.env.PLATFORM_ADMIN_EMAIL || req.user.email !== process.env.PLATFORM_ADMIN_EMAIL) {
+    return res.status(403).json({ error: 'Acesso restrito' });
+  }
+  try {
+    const todos = await prisma.user.findMany({
+      select: { subscriptionStatus: true, subscriptionTier: true, createdAt: true, cancelamentoAgendado: true, motivoCancelamento: true },
+    });
+
+    const ativos = todos.filter(u => u.subscriptionStatus === 'active');
+    const trial = todos.filter(u => u.subscriptionStatus === 'trial');
+    const cancelados = todos.filter(u => u.subscriptionStatus === 'canceled');
+
+    const mrr = ativos.reduce((soma, u) => soma + (PRECOS_POR_PLANO[u.subscriptionTier] || 0), 0);
+
+    const porTier = {};
+    for (const u of ativos) {
+      porTier[u.subscriptionTier] = (porTier[u.subscriptionTier] || 0) + 1;
+    }
+
+    const umMesAtras = new Date();
+    umMesAtras.setMonth(umMesAtras.getMonth() - 1);
+    const novosUltimoMes = todos.filter(u => new Date(u.createdAt) >= umMesAtras).length;
+    const canceladosUltimoMes = cancelados.filter(u => u.cancelamentoAgendado).length; // aproximação simples
+
+    const motivosCancelamento = cancelados.filter(u => u.motivoCancelamento).map(u => u.motivoCancelamento);
+
+    res.json({
+      totalContas: todos.length,
+      assinantesAtivos: ativos.length,
+      emTrial: trial.length,
+      cancelados: cancelados.length,
+      mrrEstimado: mrr,
+      assinantesPorTier: porTier,
+      novosUltimoMes,
+      canceladosUltimoMes,
+      motivosCancelamento,
+    });
+  } catch (e) {
+    console.error('Erro ao calcular métricas da plataforma:', e);
+    res.status(500).json({ error: 'Erro ao calcular métricas' });
   }
 });
 
@@ -1096,6 +1200,7 @@ app.get('/api/billing/status', authenticateToken, async (req, res) => {
     cancelamentoAgendado: user.cancelamentoAgendado,
     assinaturaRenovaEm: user.assinaturaRenovaEm,
     temAssinaturaStripe: !!user.stripeSubscriptionId,
+    isPlatformOwner: !!process.env.PLATFORM_ADMIN_EMAIL && user.email === process.env.PLATFORM_ADMIN_EMAIL,
   });
 });
 
@@ -1103,20 +1208,19 @@ app.get('/api/billing/status', authenticateToken, async (req, res) => {
 // até a data de renovação — não bloqueia na hora, já que o mês já foi pago).
 app.post('/api/billing/cancelar', authenticateToken, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Pagamentos ainda não configurados no servidor' });
+  const { motivo } = req.body || {};
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user?.stripeSubscriptionId) {
     return res.status(400).json({ error: 'Nenhuma assinatura ativa encontrada para esta conta' });
   }
   try {
     const sub = await stripe.subscriptions.update(user.stripeSubscriptionId, { cancel_at_period_end: true });
-    const { motivo } = req.body || {};
     await prisma.user.update({
       where: { id: user.id },
       data: {
         cancelamentoAgendado: true,
         assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
-        motivoCancelamento: motivo || null,
-        canceledAt: new Date(),
+        motivoCancelamento: motivo ? String(motivo).slice(0, 500) : undefined,
       },
     });
     res.json({ ok: true, assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null });
@@ -1218,8 +1322,6 @@ app.post('/api/billing/webhook', async (req, res) => {
             subscriptionStatus: ativo ? 'active' : (sub.status === 'past_due' ? 'past_due' : 'canceled'),
             cancelamentoAgendado: !!sub.cancel_at_period_end,
             assinaturaRenovaEm: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
-        motivoCancelamento: motivo || null,
-        canceledAt: new Date(),
           },
         });
       }
@@ -1227,7 +1329,7 @@ app.post('/api/billing/webhook', async (req, res) => {
 
     res.json({ received: true });
   } catch (e) {
-    console.error('Erro ao processar webhook:', e);
+    logErro('Erro ao processar webhook de pagamento', e);
     res.status(500).json({ error: 'Erro ao processar webhook' });
   }
 });
@@ -1419,6 +1521,57 @@ app.post('/api/whatsapp/disparar-agora', authenticateToken, async (req, res) => 
 
 // Robô automático diário — chamado pelo Vercel Cron (não pelo usuário).
 // Protegido por CRON_SECRET: só a própria Vercel (com o header certo) pode chamar.
+// Dispara um e-mail de reengajamento para contas sem acesso há mais de 7 dias (e que
+// ainda não receberam um e-mail de reengajamento nos últimos 14 dias, pra não ser chato).
+app.get('/api/cron/reengajamento', async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+  try {
+    const DIAS_INATIVIDADE = 7;
+    const DIAS_ENTRE_EMAILS = 14;
+    const limiteInatividade = new Date(Date.now() - DIAS_INATIVIDADE * 24 * 60 * 60 * 1000);
+    const limiteUltimoEmail = new Date(Date.now() - DIAS_ENTRE_EMAILS * 24 * 60 * 60 * 1000);
+
+    const candidatos = await prisma.user.findMany({
+      where: {
+        subscriptionStatus: { in: ['active', 'trial'] },
+        OR: [
+          { ultimoAcessoEm: { lt: limiteInatividade } },
+          { ultimoAcessoEm: null, createdAt: { lt: limiteInatividade } },
+        ],
+        AND: [
+          { OR: [{ ultimoEmailReengajamentoEm: null }, { ultimoEmailReengajamentoEm: { lt: limiteUltimoEmail } }] },
+        ],
+      },
+    });
+
+    const resultados = [];
+    for (const u of candidatos) {
+      try {
+        await enviarEmail(
+          u.email,
+          'Sentimos sua falta no GymFlow 👋',
+          `<p>Olá${u.nome ? `, ${u.nome}` : ''}!</p>
+           <p>Notamos que faz um tempo que você não acessa o GymFlow. Sua academia continua cadastrada e pronta pra uso.</p>
+           <p>Lembre-se: com a automação de cobrança ativada, o sistema lembra e cobra seus alunos inadimplentes sozinho — é só configurar uma vez.</p>
+           <p>Qualquer dúvida, estamos à disposição.</p>`
+        );
+        await prisma.user.update({ where: { id: u.id }, data: { ultimoEmailReengajamentoEm: new Date() } });
+        resultados.push({ userId: u.id, status: 'enviado' });
+      } catch (e) {
+        resultados.push({ userId: u.id, status: 'erro', motivo: e.message });
+      }
+    }
+
+    res.json({ ok: true, candidatos: candidatos.length, resultados });
+  } catch (err) {
+    logErro('Erro no robô de reengajamento', err);
+    res.status(500).json({ error: 'Falha no robô de reengajamento' });
+  }
+});
+
 app.get('/api/cron/whatsapp-diario', async (req, res) => {
   const auth = req.headers.authorization;
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -1463,7 +1616,7 @@ app.get('/api/cron/whatsapp-diario', async (req, res) => {
     }
     res.json({ ok: true, horaAtualBrasilia, hojeBrasiliaStr, contasElegiveis: usuarios.length, contasComAutoEnvio: todosAutoEnviar.length, resultados });
   } catch (err) {
-    console.error('Erro no robô diário:', err);
+    logErro('Erro no robô diário de notificações', err);
     res.status(500).json({ error: 'Falha no robô diário' });
   }
 });

@@ -1,0 +1,16 @@
+name: E-mail de reengajamento diário
+
+on:
+  schedule:
+    # Uma vez por dia, às 13h UTC (10h em Brasília)
+    - cron: '0 13 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint de reengajamento
+        run: |
+          curl -f -X GET "https://projeto-academia-sable.vercel.app/api/cron/reengajamento" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

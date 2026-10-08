@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   CreditCard,
   AlertTriangle,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -124,6 +126,7 @@ export default function Configuracoes() {
   const [salvandoAcademia, setSalvandoAcademia] = useState(false);
   const [academiaSalva, setAcademiaSalva] = useState(false);
   const [erroSalvarAcademia, setErroSalvarAcademia] = useState(null);
+  const [mostrarWowAutomacao, setMostrarWowAutomacao] = useState(false);
 
   // Carrega os dados da academia da conta logada (não é mais por navegador)
   useEffect(() => {
@@ -167,11 +170,15 @@ export default function Configuracoes() {
     setProcessandoAssinatura(true);
     setErroAssinatura(null);
     try {
-      const res = await apiFetch('/api/billing/cancelar', { method: 'POST', body: JSON.stringify({ motivo: motivoCancelamento }) });
+      const res = await apiFetch('/api/billing/cancelar', {
+        method: 'POST',
+        body: JSON.stringify({ motivo: motivoCancelamento || undefined }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Erro ao cancelar assinatura');
       setBillingStatus(prev => ({ ...prev, cancelamentoAgendado: true, assinaturaRenovaEm: data.assinaturaRenovaEm }));
       setMostrarConfirmCancelar(false);
+      setMotivoCancelamento('');
     } catch (e) {
       setErroAssinatura(e.message);
     } finally {
@@ -229,8 +236,10 @@ export default function Configuracoes() {
         throw new Error(corpoErro.error || 'Erro ao salvar dados da academia');
       }
 
+      const dataResposta = await res.json().catch(() => ({}));
       window.dispatchEvent(new CustomEvent('gymflow:settings-updated'));
       setAcademiaSalva(true);
+      if (dataResposta.automacaoConfiguradaAgora) setMostrarWowAutomacao(true);
       setTimeout(() => setAcademiaSalva(false), 2500);
     } catch (e) {
       setErroSalvarAcademia(e.message || 'Erro ao salvar. Tente novamente.');
@@ -295,6 +304,23 @@ export default function Configuracoes() {
 
   return (
     <div className="p-4 lg:p-6 space-y-5 page-enter">
+      {mostrarWowAutomacao && (
+        <div
+          className="rounded-xl p-4 flex items-start gap-3 animate-[fadeIn_0.3s_ease]"
+          style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)' }}
+        >
+          <Sparkles size={20} className="flex-shrink-0 mt-0.5 text-blue-400" />
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: 'var(--text-heading)' }}>Automação ativada! 🎉</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+              A partir de agora o GymFlow vai lembrar e cobrar seus alunos inadimplentes sozinho, sem você precisar mandar mensagem manual. É só configurar o horário de envio se quiser ajustar.
+            </p>
+          </div>
+          <button onClick={() => setMostrarWowAutomacao(false)} className="flex-shrink-0 p-1" style={{ color: 'var(--text-muted)' }} aria-label="Fechar">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       <div>
         <h3 className="text-xl font-bold text-heading">Configurações</h3>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Gerencie as preferências do seu sistema</p>
@@ -588,6 +614,18 @@ export default function Configuracoes() {
                   Tem certeza? Você continua com acesso total até o fim do período já pago
                   {billingStatus.assinaturaRenovaEm && ` (${new Date(billingStatus.assinaturaRenovaEm).toLocaleDateString('pt-BR')})`}, e depois a conta é bloqueada. Não vamos cobrar de novo.
                 </p>
+                <div>
+                  <label className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>Pode nos contar o motivo? (opcional, nos ajuda a melhorar)</label>
+                  <textarea
+                    value={motivoCancelamento}
+                    onChange={e => setMotivoCancelamento(e.target.value)}
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Ex: muito caro, faltou uma função, vou usar outra ferramenta..."
+                    className="w-full mt-1 text-xs rounded-lg px-2.5 py-2 resize-none"
+                    style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleCancelarAssinatura}

@@ -13,6 +13,7 @@ import AuthCard from './pages/AuthCard';
 import Setup from './pages/Setup';
 import Assinatura from './pages/Assinatura';
 import LandingPage from './pages/LandingPage';
+import PlataformaMetricas from './pages/PlataformaMetricas';
 
 const backend = import.meta.env.VITE_BACKEND;
 
@@ -22,6 +23,7 @@ const PAGES = {
   alunos: { component: Alunos, title: 'Gestão de Alunos' },
   financeiro: { component: Financeiro, title: 'Controle Financeiro' },
   configuracoes: { component: Configuracoes, title: 'Configurações' },
+  plataforma: { component: PlataformaMetricas, title: 'Métricas da Plataforma' },
 };
 
 /**
@@ -162,6 +164,7 @@ function AppContent() {
           localStorage.setItem('gymflow_sidebar_colapsada', prev ? '0' : '1');
           return !prev;
         })}
+        isPlatformOwner={!!billing?.isPlatformOwner}
       />
 
       {/* ===== Área Principal (direita) ===== */}

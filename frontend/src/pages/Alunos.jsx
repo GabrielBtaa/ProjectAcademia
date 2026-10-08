@@ -554,6 +554,31 @@ export default function Alunos({ searchTerm = '' }) {
   }, []);
 
   // Salva aluno (novo ou editado)
+  const [limiteAtingido, setLimiteAtingido] = useState(null); // { mensagem } quando bate o teto do plano
+  const [upgradeCarregando, setUpgradeCarregando] = useState(false);
+
+  const ORDEM_TIERS = ['starter', 'pro', 'business'];
+  const handleUpgrade = async () => {
+    setUpgradeCarregando(true);
+    try {
+      const resStatus = await apiFetch('/api/billing/status');
+      const status = await resStatus.json().catch(() => ({}));
+      const tierAtualIdx = ORDEM_TIERS.indexOf(status.subscriptionTier);
+      const proximoTier = ORDEM_TIERS[tierAtualIdx + 1] || ORDEM_TIERS[ORDEM_TIERS.length - 1];
+
+      const res = await apiFetch('/api/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plano: proximoTier }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'Erro ao iniciar upgrade');
+      window.location.href = data.url;
+    } catch (e) {
+      alert(e.message || 'Erro ao iniciar upgrade. Tente pela tela de Assinatura.');
+      setUpgradeCarregando(false);
+    }
+  };
+
   const handleSalvar = async (dadosAluno) => {
     const payload = {
       nome: dadosAluno.nome,
@@ -582,7 +607,13 @@ export default function Alunos({ searchTerm = '' }) {
           body: JSON.stringify(payload),
         });
         const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body.error || res.statusText);
+        if (!res.ok) {
+          if (body.code === 'LIMIT_REACHED') {
+            setLimiteAtingido({ mensagem: body.error });
+            return;
+          }
+          throw new Error(body.error || res.statusText);
+        }
         setAlunos(prev => [...prev, body]);
       }
       setModalAberto(false);
@@ -664,6 +695,26 @@ export default function Alunos({ searchTerm = '' }) {
           onClose={() => setModalImportarAberto(false)}
           onImportado={() => { setModalImportarAberto(false); carregarDados(); }}
         />
+      )}
+
+      {limiteAtingido && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 text-center space-y-4" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-2)' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
+              <AlertCircle size={22} color="#fff" />
+            </div>
+            <div>
+              <p className="font-bold text-sm" style={{ color: 'var(--text-heading)' }}>Limite do seu plano atingido</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{limiteAtingido.mensagem}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setLimiteAtingido(null)} className="btn-secondary flex-1">Agora não</button>
+              <button onClick={handleUpgrade} disabled={upgradeCarregando} className="btn-primary flex-1 justify-center">
+                {upgradeCarregando ? 'Abrindo...' : 'Fazer upgrade'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ===== Barra de Busca + Filtros ===== */}
