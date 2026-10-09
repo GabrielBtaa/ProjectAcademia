@@ -220,6 +220,7 @@ function FormCadastro({ onVoltarLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
   const { login } = useAuth();
 
   const handleChange = (field, value) => {
@@ -239,6 +240,7 @@ function FormCadastro({ onVoltarLogin }) {
     if (!form.password) return setError('Crie uma senha de acesso');
     if (form.password.length < 6) return setError('A senha deve ter no mínimo 6 caracteres');
     if (form.password !== form.confirmarSenha) return setError('A confirmação de senha não confere');
+    if (!aceitouTermos) return setError('Para criar a conta, aceite os Termos de Uso e a Política de Privacidade');
 
     setLoading(true);
     try {
@@ -338,6 +340,14 @@ function FormCadastro({ onVoltarLogin }) {
             Cadastro concluído! Liberando seus 30 dias de teste grátis...
           </div>
         )}
+
+        <label className="flex items-start gap-2 text-[0.7rem] cursor-pointer" style={{ color: 'var(--text-muted)' }}>
+          <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)} className="mt-0.5" />
+          <span>
+            Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="underline" style={{ color: '#3b82f6' }}>Termos de Uso</a> e
+            a <a href="/privacidade" target="_blank" rel="noreferrer" className="underline" style={{ color: '#3b82f6' }}>Política de Privacidade</a>.
+          </span>
+        </label>
 
         <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
           {loading ? 'Criando sua conta...' : (<>Começar Meus 30 Dias Grátis <ArrowRight size={16} /></>)}

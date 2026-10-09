@@ -14,6 +14,7 @@ import Setup from './pages/Setup';
 import Assinatura from './pages/Assinatura';
 import LandingPage from './pages/LandingPage';
 import PlataformaMetricas from './pages/PlataformaMetricas';
+import PaginaLegal from './pages/PaginaLegal';
 
 const backend = import.meta.env.VITE_BACKEND;
 
@@ -199,6 +200,15 @@ function AppContent() {
  * Envolve tudo com o AuthProvider
  */
 export default function App() {
+  // Páginas públicas legais (acessíveis sem login, por link direto)
+  const pathname = window.location.pathname.replace(/\/+$/, '');
+  if (pathname === '/privacidade' || pathname === '/termos') {
+    return (
+      <ThemeProvider>
+        <PaginaLegal tipo={pathname === '/termos' ? 'termos' : 'privacidade'} />
+      </ThemeProvider>
+    );
+  }
   return (
     <ThemeProvider>
       <ViewModeProvider>
