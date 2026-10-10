@@ -2,7 +2,7 @@ import { ArrowLeft, Dumbbell } from 'lucide-react';
 
 // >>> EDITE AQUI com os dados reais da sua empresa/contato antes de divulgar <<<
 const NOME_EMPRESA = 'GymFlow';
-const EMAIL_CONTATO = 'gabrielbtadesign@mail.com';
+const EMAIL_CONTATO = 'contato@seudominio.com.br';
 const ULTIMA_ATUALIZACAO = '08/10/2026';
 
 const Secao = ({ titulo, children }) => (

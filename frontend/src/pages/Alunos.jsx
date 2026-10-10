@@ -98,7 +98,7 @@ function AlunoModal({ aluno, planos, onClose, onSave }) {
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[75dvh] overflow-y-auto">
           {/* Nome */}
           <div>
             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Nome Completo *</label>
@@ -473,6 +473,8 @@ export default function Alunos({ searchTerm = '' }) {
     const recalcular = () => {
       const wrapper = tabelaWrapperRef.current;
       if (!wrapper) return;
+      // No celular a tabela fica escondida (usa cards): não dá pra medir, usa valor fixo
+      if (wrapper.offsetParent === null) { setItensPorPagina(8); return; }
 
       const topoTabela = wrapper.getBoundingClientRect().top;
       const primeiraLinha = wrapper.querySelector('tbody tr');

@@ -42,6 +42,9 @@ model User {
   ultimoAcessoEm            DateTime?
   ultimoEmailReengajamentoEm DateTime?
   motivoCancelamento        String?
+  // Controle manual do dono da plataforma (aba Admin SaaS)
+  acessoLiberadoManual      Boolean  @default(false)
+  bloqueadoPorAdmin         Boolean  @default(false)
   subscriptionStatus   String   @default("inactive") // inactive | trial | active | past_due | canceled
   subscriptionTier     String? // starter | pro | business
   maxAlunos            Int      @default(0)

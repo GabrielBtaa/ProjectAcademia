@@ -13,7 +13,7 @@ import AuthCard from './pages/AuthCard';
 import Setup from './pages/Setup';
 import Assinatura from './pages/Assinatura';
 import LandingPage from './pages/LandingPage';
-import PlataformaMetricas from './pages/PlataformaMetricas';
+import PlataformaAdmin from './pages/PlataformaAdmin';
 import PaginaLegal from './pages/PaginaLegal';
 
 const backend = import.meta.env.VITE_BACKEND;
@@ -24,7 +24,7 @@ const PAGES = {
   alunos: { component: Alunos, title: 'Gestão de Alunos' },
   financeiro: { component: Financeiro, title: 'Controle Financeiro' },
   configuracoes: { component: Configuracoes, title: 'Configurações' },
-  plataforma: { component: PlataformaMetricas, title: 'Métricas da Plataforma' },
+  plataforma: { component: PlataformaAdmin, title: 'Admin do SaaS' },
 };
 
 /**
@@ -134,7 +134,7 @@ function AppContent() {
   if (billing && !billing.isAdmin) {
     const trialAtivo = billing.subscriptionStatus === 'trial' && billing.trialEndsAt && new Date(billing.trialEndsAt) > new Date();
     const liberado = billing.subscriptionStatus === 'active' || trialAtivo;
-    if (!liberado) return <Assinatura />;
+    if (!liberado) return <Assinatura bloqueadoPorAdmin={!!billing.bloqueadoPorAdmin} />;
   }
 
   // Mostrar setup se não houver planos
@@ -151,8 +151,8 @@ function AppContent() {
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
-      style={{ background: 'var(--bg-page)' }}
+      className="flex overflow-hidden"
+      style={{ background: 'var(--bg-page)', height: '100dvh' }}
     >
       {/* ===== Sidebar (fixa na esquerda em desktop) ===== */}
       <Sidebar

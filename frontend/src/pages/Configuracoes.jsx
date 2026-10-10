@@ -576,6 +576,7 @@ export default function Configuracoes() {
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   {billingStatus.subscriptionStatus === 'trial' && 'Você está no período de teste grátis.'}
+                  {billingStatus.acessoLiberadoManual && !billingStatus.temAssinaturaStripe && 'Acesso liberado pelo administrador do GymFlow.'}
                   {billingStatus.subscriptionStatus === 'active' && !billingStatus.cancelamentoAgendado && billingStatus.assinaturaRenovaEm &&
                     `Renova automaticamente em ${new Date(billingStatus.assinaturaRenovaEm).toLocaleDateString('pt-BR')}.`}
                   {billingStatus.subscriptionStatus === 'active' && billingStatus.cancelamentoAgendado && billingStatus.assinaturaRenovaEm &&

@@ -474,7 +474,11 @@ async function requireActiveSubscription(req, res, next) {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
-    if (user.role === 'admin' || user.subscriptionStatus === 'active') {
+    // Bloqueio manual do dono da plataforma vale acima de tudo (exceto contas admin)
+    if (user.bloqueadoPorAdmin && user.role !== 'admin') {
+      return res.status(402).json({ error: 'O acesso desta conta foi suspenso. Entre em contato com o suporte.', code: 'BLOCKED_BY_ADMIN' });
+    }
+    if (user.role === 'admin' || user.acessoLiberadoManual || user.subscriptionStatus === 'active') {
       req.currentUser = user;
       return next();
     }
@@ -1141,7 +1145,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
 // Métricas da plataforma como um todo (todos os clientes), não da academia de um cliente.
 // Protegido por uma env var própria (PLATFORM_ADMIN_EMAIL) — nenhum cliente, mesmo com
 // role 'admin' na própria academia dele, consegue ver dados de negócio de outros clientes.
-const PRECOS_POR_PLANO = { starter: 250, pro: 400, business: 600 }; // ajuste conforme seus preços reais
+const PRECOS_POR_PLANO = { starter: 150, pro: 250, business: 400 }; // mantenha igual aos preços da tela de planos
 
 app.get('/api/plataforma/metricas', authenticateToken, async (req, res) => {
   if (!process.env.PLATFORM_ADMIN_EMAIL || req.user.email !== process.env.PLATFORM_ADMIN_EMAIL) {
@@ -1187,12 +1191,97 @@ app.get('/api/plataforma/metricas', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== Painel do dono da plataforma (somente PLATFORM_ADMIN_EMAIL) =====
+function requirePlatformOwner(req, res, next) {
+  if (!process.env.PLATFORM_ADMIN_EMAIL || req.user.email !== process.env.PLATFORM_ADMIN_EMAIL) {
+    return res.status(403).json({ error: 'Acesso restrito' });
+  }
+  next();
+}
+
+// Lista todas as contas cadastradas (nunca devolve senha ou segredos)
+app.get('/api/plataforma/usuarios', authenticateToken, requirePlatformOwner, async (req, res) => {
+  try {
+    const usuarios = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, email: true, nome: true, role: true, nomeAcademia: true, telefoneAcademia: true,
+        subscriptionStatus: true, subscriptionTier: true, maxAlunos: true, trialEndsAt: true,
+        createdAt: true, ultimoAcessoEm: true, cancelamentoAgendado: true, assinaturaRenovaEm: true,
+        stripeCustomerId: true, stripeSubscriptionId: true, motivoCancelamento: true,
+        acessoLiberadoManual: true, bloqueadoPorAdmin: true,
+        _count: { select: { alunos: true } },
+      },
+    });
+    res.json(usuarios.map(({ stripeCustomerId, stripeSubscriptionId, _count, ...u }) => ({
+      ...u,
+      temStripe: !!stripeCustomerId,
+      temAssinaturaStripe: !!stripeSubscriptionId,
+      totalAlunos: _count.alunos,
+    })));
+  } catch (e) {
+    logErro('Erro ao listar usuários da plataforma', e);
+    res.status(500).json({ error: 'Erro ao listar usuários' });
+  }
+});
+
+// Faturas (pagamentos) de um cliente, direto do Stripe
+app.get('/api/plataforma/usuarios/:id/faturas', authenticateToken, requirePlatformOwner, async (req, res) => {
+  try {
+    if (!stripe) return res.status(503).json({ error: 'Stripe não configurado no servidor' });
+    const alvo = await prisma.user.findUnique({ where: { id: Number(req.params.id) }, select: { stripeCustomerId: true } });
+    if (!alvo) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!alvo.stripeCustomerId) return res.json([]);
+    const faturas = await stripe.invoices.list({ customer: alvo.stripeCustomerId, limit: 12 });
+    res.json(faturas.data.map(f => ({
+      id: f.id,
+      valor: (f.amount_paid || f.amount_due || 0) / 100,
+      moeda: (f.currency || 'brl').toUpperCase(),
+      status: f.status,
+      data: new Date(f.created * 1000).toISOString(),
+      url: f.hosted_invoice_url || null,
+    })));
+  } catch (e) {
+    logErro('Erro ao buscar faturas', e);
+    res.status(500).json({ error: 'Erro ao buscar faturas no Stripe' });
+  }
+});
+
+// Liberar sem pagamento, remover liberação, bloquear ou desbloquear uma conta
+app.post('/api/plataforma/usuarios/:id/acesso', authenticateToken, requirePlatformOwner, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { acao } = req.body || {};
+    const alvo = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    if (!alvo) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (alvo.role === 'admin' || id === req.user.id) {
+      return res.status(400).json({ error: 'Contas administradoras não podem ser alteradas por aqui' });
+    }
+    const mudancas = {
+      liberar: { acessoLiberadoManual: true, bloqueadoPorAdmin: false },
+      remover_liberacao: { acessoLiberadoManual: false },
+      bloquear: { bloqueadoPorAdmin: true, acessoLiberadoManual: false },
+      desbloquear: { bloqueadoPorAdmin: false },
+    }[acao];
+    if (!mudancas) return res.status(400).json({ error: 'Ação inválida' });
+    const atualizado = await prisma.user.update({ where: { id }, data: mudancas, select: { acessoLiberadoManual: true, bloqueadoPorAdmin: true } });
+    res.json({ ok: true, ...atualizado });
+  } catch (e) {
+    logErro('Erro ao alterar acesso de usuário', e);
+    res.status(500).json({ error: 'Erro ao alterar acesso' });
+  }
+});
+
 app.get('/api/billing/status', authenticateToken, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
   const trialExpirado = user.subscriptionStatus === 'trial' && (!user.trialEndsAt || new Date(user.trialEndsAt) <= new Date());
   res.json({
-    subscriptionStatus: trialExpirado ? 'inactive' : user.subscriptionStatus,
+    subscriptionStatus: (user.bloqueadoPorAdmin && user.role !== 'admin')
+      ? 'blocked'
+      : (user.acessoLiberadoManual ? 'active' : (trialExpirado ? 'inactive' : user.subscriptionStatus)),
+    bloqueadoPorAdmin: !!user.bloqueadoPorAdmin && user.role !== 'admin',
+    acessoLiberadoManual: !!user.acessoLiberadoManual,
     subscriptionTier: user.subscriptionTier,
     maxAlunos: user.maxAlunos,
     isAdmin: user.role === 'admin',

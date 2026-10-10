@@ -379,3 +379,14 @@ body {
 .page-enter {
   animation: fadeInUp 0.35s ease-out;
 }
+
+
+/* ===== AJUSTES PARA CELULAR ===== */
+@media (max-width: 768px) {
+  /* iOS dá zoom automático em campos com fonte menor que 16px */
+  input, select, textarea { font-size: 16px !important; }
+  /* Botões e alvos de toque confortáveis */
+  button { touch-action: manipulation; }
+}
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-x: hidden; }

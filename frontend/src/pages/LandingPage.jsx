@@ -104,7 +104,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
       
       {/* ===== Barra Superior / Navegação ===== */}
       <header className="sticky top-0 z-50 backdrop-blur-xl" style={{ background: 'var(--surface-modal)', borderBottom: '1px solid var(--border-2)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
           
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -146,7 +146,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
               style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
             >
               <Sparkles size={15} className="text-amber-300" />
-              <span>Testar 30 Dias Grátis</span>
+              <span className="sm:hidden">Testar grátis</span><span className="hidden sm:inline">Testar 30 Dias Grátis</span>
             </button>
           </div>
         </div>
@@ -398,7 +398,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <span>•</span>
             <a href="/termos" className="hover:text-blue-400 transition-colors">Termos</a>
             <span>•</span>
-            <span>Versão 1.27.0</span>
+            <span>Versão 1.28.0</span>
           </div>
         </div>
       </footer>

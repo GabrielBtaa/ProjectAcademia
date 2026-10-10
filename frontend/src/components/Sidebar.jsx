@@ -41,7 +41,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
   const [nomeAcademia, setNomeAcademia] = useState('GymFlow');
   const itensBase = isRecepcionista ? NAV_ITEMS.filter(i => i.id !== 'configuracoes') : NAV_ITEMS;
   const navItems = isPlatformOwner
-    ? [...itensBase, { id: 'plataforma', label: 'Métricas (SaaS)', icon: BarChart3 }]
+    ? [...itensBase, { id: 'plataforma', label: 'Admin do SaaS', icon: BarChart3 }]
     : itensBase;
 
   useEffect(() => {
@@ -79,8 +79,11 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
       <style>{`
         .sb-shell { transition: width 0.3s ease, background 0.3s ease, border-color 0.3s ease; }
         .sb-hide-when-collapsed { transition: opacity 0.15s ease, max-width 0.25s ease; }
-        .sb-collapsed .sb-hide-when-collapsed { opacity: 0; max-width: 0; overflow: hidden; pointer-events: none; }
+        @media (min-width: 1024px) {
+          .sb-collapsed .sb-hide-when-collapsed { opacity: 0; max-width: 0; overflow: hidden; pointer-events: none; }
+        }
         .sb-nav-btn { position: relative; }
+        @media (min-width: 1024px) {
         .sb-nav-btn.is-active::after {
           content: '';
           position: absolute;
@@ -93,6 +96,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
           background: ${accent};
         }
         .sb-collapsed .sb-nav-btn.is-active::after { right: -13px; }
+        }
       `}</style>
 
       {/* Overlay escuro atrás da sidebar em mobile */}
@@ -106,8 +110,8 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
       {/* Sidebar principal — card flutuante no desktop, drawer full-height no mobile */}
       <aside
         className={`
-          sb-shell fixed top-0 left-0 h-full z-50 flex flex-col
-          lg:top-4 lg:left-4 lg:h-[calc(100%-2rem)] lg:rounded-2xl lg:shadow-xl
+          sb-shell fixed top-0 left-0 h-[100dvh] z-50 flex flex-col overflow-y-auto
+          lg:top-4 lg:left-4 lg:h-[calc(100%-2rem)] lg:overflow-visible lg:rounded-2xl lg:shadow-xl
           lg:translate-x-0 lg:z-auto
           ${colapsada ? 'sb-collapsed lg:w-[76px]' : 'lg:w-64'}
           w-72
@@ -238,7 +242,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
             style={{ background: isLight ? 'rgba(37, 99, 235, 0.06)' : 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.27.0</p>
+            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.28.0</p>
           </div>
         </div>
       </aside>

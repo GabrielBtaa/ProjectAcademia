@@ -26,8 +26,8 @@ export default function AuthCard({ modoInicial = 'login', onVoltar }) {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 relative"
-      style={{ background: 'var(--bg-page)' }}
+      className="flex items-center justify-center p-4 pt-20 sm:pt-4 relative"
+      style={{ background: 'var(--bg-page)', minHeight: '100dvh' }}
     >
       {onVoltar && (
         <button
@@ -99,13 +99,17 @@ export default function AuthCard({ modoInicial = 'login', onVoltar }) {
         .authcard-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; display: flex; }
 
         @media (max-width: 760px) {
-          .authcard { height: auto; min-height: 0; }
-          .authcard-block { position: relative; width: 100%; height: auto; transform: none !important; transition: opacity 0.4s ease, visibility 0.4s; }
+          .authcard { height: auto; min-height: 0; max-width: 460px; }
           .authcard-brand-login, .authcard-brand-register { display: none; }
-          .authcard-form-login, .authcard-form-register { left: 0; opacity: 1; visibility: visible; position: absolute; inset: 0; }
-          .authcard.is-cadastro .authcard-form-login,
+          /* No celular só um formulário aparece por vez, em fluxo normal (sem sobreposição) */
+          .authcard-block { position: relative; left: 0; width: 100%; height: auto; transform: none !important; transition: none; overflow: visible; }
+          .authcard-form-login, .authcard-form-register { opacity: 1; visibility: visible; }
+          .authcard.is-cadastro .authcard-form-login { display: none; }
           .authcard:not(.is-cadastro) .authcard-form-register { display: none; }
-          .authcard-form-inner { height: auto; overflow: visible; padding: 32px 24px; position: relative; }
+          .authcard-block-inner { height: auto; padding: 0; }
+          .authcard-form-inner { height: auto; overflow: visible; padding: 28px 22px; }
+          .authcard-input { font-size: 16px; padding: 11px 14px; }
+          .authcard-input.has-icon { padding-left: 40px; }
         }
       `}</style>
 

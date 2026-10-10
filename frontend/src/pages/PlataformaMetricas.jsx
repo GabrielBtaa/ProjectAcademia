@@ -19,7 +19,7 @@ function Cartao({ icon: Icon, titulo, valor, cor }) {
  * (protegido no backend via PLATFORM_ADMIN_EMAIL; esta tela só chega a ser exibida porque
  * o App.jsx já checou billing.isPlatformOwner antes de rotear pra cá).
  */
-export default function PlataformaMetricas() {
+export default function PlataformaMetricas({ embutido = false }) {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
 
@@ -33,15 +33,17 @@ export default function PlataformaMetricas() {
       .catch(e => setErro(e.message));
   }, []);
 
-  if (erro) return <div className="p-6 text-sm" style={{ color: '#f87171' }}>{erro}</div>;
-  if (!dados) return <div className="p-6 text-sm" style={{ color: 'var(--text-muted)' }}>Carregando métricas...</div>;
+  if (erro) return <div className="p-2 text-sm" style={{ color: '#f87171' }}>{erro}</div>;
+  if (!dados) return <div className="p-2 text-sm" style={{ color: 'var(--text-muted)' }}>Carregando métricas...</div>;
 
   return (
-    <div className="p-4 lg:p-6 space-y-5 page-enter">
-      <div>
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text-heading)' }}>Métricas da Plataforma</h2>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Visão geral de todos os clientes do GymFlow (só você vê esta tela)</p>
-      </div>
+    <div className={embutido ? 'space-y-5' : 'p-4 lg:p-6 space-y-5 page-enter'}>
+      {!embutido && (
+        <div>
+          <h2 className="text-xl font-bold" style={{ color: 'var(--text-heading)' }}>Métricas da Plataforma</h2>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Visão geral de todos os clientes do GymFlow (só você vê esta tela)</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Cartao icon={DollarSign} titulo="MRR estimado" valor={`R$ ${dados.mrrEstimado.toLocaleString('pt-BR')}`} cor="#22c55e" />
