@@ -337,7 +337,7 @@ app.post('/api/auth/logout', authenticateToken, async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { email, confirmarEmail, password, confirmarSenha, nome, celular, modeloNegocio } = req.body || {};
+    const { email, confirmarEmail, password, confirmarSenha, nome, celular, modeloNegocio, indicacao } = req.body || {};
 
     if (!email || !password || !nome) {
       return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
@@ -364,6 +364,14 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Email já cadastrado. Faça login para acessar.' });
     }
 
+    // Indicação: se veio um código válido, guarda quem indicou (inválido é ignorado em silêncio)
+    let indicadoPorUserId = null;
+    const codigoRef = String(indicacao || '').trim().toUpperCase().slice(0, 20);
+    if (codigoRef) {
+      const quemIndicou = await prisma.user.findUnique({ where: { codigoIndicacao: codigoRef }, select: { id: true } });
+      if (quemIndicou) indicadoPorUserId = quemIndicou.id;
+    }
+
     const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const hashedPassword = bcrypt.hashSync(String(password), 10);
 
@@ -377,6 +385,7 @@ app.post('/api/auth/register', async (req, res) => {
         subscriptionTier: 'pro',
         maxAlunos: 9999,
         trialEndsAt,
+        indicadoPorUserId,
       }
     });
 
@@ -399,7 +408,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no registro:', error);
-    return res.status(500).json({ error: `Falha no cadastro: ${error.message || error}` });
+    return res.status(500).json({ error: 'Erro interno ao criar a conta. Tente novamente em instantes.' });
   }
 });
 
@@ -1272,6 +1281,89 @@ app.post('/api/plataforma/usuarios/:id/acesso', authenticateToken, requirePlatfo
   }
 });
 
+// ===== Programa de indicação =====
+// Quando um indicado vira assinante pago, quem indicou ganha 1 mês grátis (crédito no Stripe
+// no valor do plano dele, abatido automaticamente na próxima fatura).
+async function creditarMesesStripe(customerId, tier, meses) {
+  const valor = Math.round((PRECOS_POR_PLANO[tier] || 0) * meses * 100);
+  if (!stripe || !customerId || valor <= 0) throw new Error('Crédito indisponível');
+  await stripe.customers.createBalanceTransaction(customerId, {
+    amount: -valor,
+    currency: 'brl',
+    description: `Crédito de indicação (${meses} mês)`,
+  });
+}
+
+async function concederRecompensaIndicacao(indicado) {
+  if (!indicado?.indicadoPorUserId || indicado.indicacaoRecompensada) return;
+  // updateMany com condição garante que reenvios do webhook não premiem duas vezes
+  const marcado = await prisma.user.updateMany({
+    where: { id: indicado.id, indicacaoRecompensada: false },
+    data: { indicacaoRecompensada: true },
+  });
+  if (marcado.count === 0) return;
+
+  const indicador = await prisma.user.findUnique({ where: { id: indicado.indicadoPorUserId } });
+  if (!indicador) return;
+
+  let pendente = true;
+  if (indicador.stripeCustomerId && indicador.stripeSubscriptionId && indicador.subscriptionStatus === 'active') {
+    try {
+      await creditarMesesStripe(indicador.stripeCustomerId, indicador.subscriptionTier, 1);
+      pendente = false;
+    } catch (e) {
+      logErro('Erro ao creditar indicação no Stripe', e);
+    }
+  }
+  await prisma.user.update({
+    where: { id: indicador.id },
+    data: {
+      indicacoesConvertidas: { increment: 1 },
+      ...(pendente ? { creditosIndicacaoPendentes: { increment: 1 } } : {}),
+    },
+  });
+}
+
+// Quem ainda não assinava quando indicou alguém recebe os créditos acumulados ao assinar
+async function aplicarCreditosPendentes(user) {
+  if (!user || user.creditosIndicacaoPendentes <= 0 || !user.stripeCustomerId) return;
+  try {
+    await creditarMesesStripe(user.stripeCustomerId, user.subscriptionTier, user.creditosIndicacaoPendentes);
+    await prisma.user.update({ where: { id: user.id }, data: { creditosIndicacaoPendentes: 0 } });
+  } catch (e) {
+    logErro('Erro ao aplicar créditos pendentes de indicação', e);
+  }
+}
+
+function gerarCodigoIndicacao() {
+  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem caracteres confusos (0/O, 1/I)
+  return Array.from(crypto.randomBytes(8)).map(b => alfabeto[b % alfabeto.length]).join('');
+}
+
+app.get('/api/indicacao', authenticateToken, async (req, res) => {
+  try {
+    let user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    for (let tentativa = 0; !user.codigoIndicacao && tentativa < 5; tentativa++) {
+      try {
+        user = await prisma.user.update({ where: { id: user.id }, data: { codigoIndicacao: gerarCodigoIndicacao() } });
+      } catch (e) {
+        if (e.code !== 'P2002') throw e; // colisão de código: tenta outro
+      }
+    }
+    const totalIndicados = await prisma.user.count({ where: { indicadoPorUserId: user.id } });
+    res.json({
+      codigo: user.codigoIndicacao,
+      totalIndicados,
+      convertidos: user.indicacoesConvertidas,
+      creditosPendentes: user.creditosIndicacaoPendentes,
+    });
+  } catch (e) {
+    logErro('Erro ao carregar indicação', e);
+    res.status(500).json({ error: 'Erro ao carregar dados de indicação' });
+  }
+});
+
 app.get('/api/billing/status', authenticateToken, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
@@ -1397,6 +1489,10 @@ app.post('/api/billing/webhook', async (req, res) => {
             cancelamentoAgendado: false,
           },
         });
+        // Indicação: premia quem indicou e aplica créditos que este usuário tenha acumulado
+        const atualizado = await prisma.user.findUnique({ where: { id: userId } });
+        await concederRecompensaIndicacao(atualizado).catch(e => logErro('Erro na recompensa de indicação', e));
+        await aplicarCreditosPendentes(atualizado);
       }
     }
 

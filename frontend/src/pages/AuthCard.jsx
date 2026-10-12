@@ -251,10 +251,11 @@ function FormCadastro({ onVoltarLogin }) {
       const response = await fetch(apiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, indicacao: localStorage.getItem('gymflow_ref') || undefined }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Erro ao realizar cadastro');
+      localStorage.removeItem('gymflow_ref');
       setSuccess(true);
       const result = await login(form.email, form.password);
       if (!result.success) setError('Cadastro realizado! Por favor, faça login com seu email e senha.');

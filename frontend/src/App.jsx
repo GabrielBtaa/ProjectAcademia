@@ -18,6 +18,12 @@ import PaginaLegal from './pages/PaginaLegal';
 
 const backend = import.meta.env.VITE_BACKEND;
 
+// Link de indicação (?ref=CODIGO): guarda o código para ser enviado quando a pessoa criar a conta
+try {
+  const ref = new URLSearchParams(window.location.search).get('ref');
+  if (ref) localStorage.setItem('gymflow_ref', ref.slice(0, 20));
+} catch { /* sem localStorage: ignora */ }
+
 // Mapa de páginas: ID → { componente, título }
 const PAGES = {
   dashboard: { component: Dashboard, title: 'Dashboard' },

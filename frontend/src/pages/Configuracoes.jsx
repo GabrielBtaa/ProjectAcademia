@@ -10,6 +10,9 @@ import {
   CheckCircle2,
   CreditCard,
   AlertTriangle,
+  Gift,
+  Copy,
+  Share2,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -151,6 +154,21 @@ export default function Configuracoes() {
   const [senhaLoading, setSenhaLoading] = useState(false);
   const [senhaErro, setSenhaErro] = useState(null);
   const [senhaSucesso, setSenhaSucesso] = useState(false);
+
+  // ===== Indicação =====
+  const [indicacao, setIndicacao] = useState(null);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+  useEffect(() => {
+    apiFetch('/api/indicacao').then(r => r.json()).then(d => { if (d.codigo) setIndicacao(d); }).catch(() => {});
+  }, []);
+  const linkIndicacao = indicacao ? `${window.location.origin}/?ref=${indicacao.codigo}` : '';
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(linkIndicacao);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2000);
+    } catch { window.prompt('Copie o link:', linkIndicacao); }
+  };
 
   // ===== Assinatura =====
   const [billingStatus, setBillingStatus] = useState(null);
@@ -559,6 +577,41 @@ export default function Configuracoes() {
           <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
         </SettingItem>
       </div>
+
+      {/* Indique e ganhe */}
+      {indicacao && (
+        <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
+          <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+            <Gift size={17} style={{ color: '#a78bfa' }} />
+            <h4 className="font-semibold text-heading text-sm">Indique e ganhe 1 mês grátis</h4>
+          </div>
+          <div className="py-4 space-y-3">
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Quando uma academia criar conta pelo seu link e assinar um plano pago, você ganha um mês grátis (crédito no valor do seu plano, abatido na próxima fatura).
+            </p>
+            <div className="flex gap-2">
+              <input readOnly value={linkIndicacao} onFocus={e => e.target.select()}
+                className="flex-1 min-w-0 rounded-lg px-3 py-2 text-xs"
+                style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }} />
+              <button onClick={copiarLink} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg flex-shrink-0"
+                style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>
+                <Copy size={13} /> {linkCopiado ? 'Copiado!' : 'Copiar'}
+              </button>
+              <a href={`https://wa.me/?text=${encodeURIComponent('Conheça o GymFlow, sistema de gestão para academias, com 30 dias grátis: ' + linkIndicacao)}`}
+                target="_blank" rel="noreferrer" aria-label="Compartilhar no WhatsApp"
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg flex-shrink-0"
+                style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}>
+                <Share2 size={13} /> <span className="hidden sm:inline">WhatsApp</span>
+              </a>
+            </div>
+            <div className="flex gap-6 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <span><strong style={{ color: 'var(--text-heading)' }}>{indicacao.totalIndicados}</strong> cadastro(s) pelo seu link</span>
+              <span><strong style={{ color: 'var(--text-heading)' }}>{indicacao.convertidos}</strong> assinaram</span>
+              {indicacao.creditosPendentes > 0 && <span><strong style={{ color: '#a78bfa' }}>{indicacao.creditosPendentes}</strong> mês(es) a receber ao assinar</span>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Assinatura */}
       {billingStatus && !billingStatus.isAdmin && (

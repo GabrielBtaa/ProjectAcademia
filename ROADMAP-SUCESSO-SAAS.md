@@ -39,7 +39,7 @@
 
 ## 5. Distribuição / Growth
 
-- [ ] **Programa de indicação (referral).** Adicionar um `codigoIndicacao` único por `User`, um campo `indicadoPorUserId` no cadastro (capturável via query param `?ref=CODIGO` na Landing Page/Register), e lógica de recompensa (ex: um mês grátis ou desconto) quando o indicado vira assinante pago. Envolve: schema (`Prisma`), endpoint de cadastro (`POST /api/auth/register` já existe, precisa aceitar o parâmetro), e lógica de aplicar a recompensa no webhook do Stripe (`checkout.session.completed`).
+- [x] **Programa de indicação (referral).** Adicionar um `codigoIndicacao` único por `User`, um campo `indicadoPorUserId` no cadastro (capturável via query param `?ref=CODIGO` na Landing Page/Register), e lógica de recompensa (ex: um mês grátis ou desconto) quando o indicado vira assinante pago. Envolve: schema (`Prisma`), endpoint de cadastro (`POST /api/auth/register` já existe, precisa aceitar o parâmetro), e lógica de aplicar a recompensa no webhook do Stripe (`checkout.session.completed`).
 - [ ] Conteúdo e parcerias (contadores, consultores de academia) — fora do escopo de código, mas vale manter registrado aqui como lembrete estratégico.
 
 ## 6. Compliance / Segurança de dados

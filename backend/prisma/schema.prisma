@@ -45,6 +45,12 @@ model User {
   // Controle manual do dono da plataforma (aba Admin SaaS)
   acessoLiberadoManual      Boolean  @default(false)
   bloqueadoPorAdmin         Boolean  @default(false)
+  // Programa de indicação
+  codigoIndicacao             String?  @unique
+  indicadoPorUserId           Int?
+  indicacaoRecompensada       Boolean  @default(false)
+  indicacoesConvertidas       Int      @default(0)
+  creditosIndicacaoPendentes  Int      @default(0)
   subscriptionStatus   String   @default("inactive") // inactive | trial | active | past_due | canceled
   subscriptionTier     String? // starter | pro | business
   maxAlunos            Int      @default(0)
