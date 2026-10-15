@@ -1,0 +1,18 @@
+name: Testes automáticos
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # --ignore-scripts: os testes usam um banco falso, não precisam do engine do Prisma
+      - run: npm install --ignore-scripts
+      - run: npm test

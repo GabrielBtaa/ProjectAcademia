@@ -56,7 +56,14 @@ export function AuthProvider({ children }) {
   };
 
   // Função para fazer logout
-  const logout = () => {
+  const logout = async () => {
+    const token = localStorage.getItem('token');
+    // Revoga o token no servidor (best-effort: se falhar, ainda sai localmente)
+    try {
+      if (token) {
+        await fetch(apiUrl('/api/auth/logout'), { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      }
+    } catch { /* sem rede: segue o logout local */ }
     localStorage.removeItem('token');
     setUser(null);
     window.location.reload();

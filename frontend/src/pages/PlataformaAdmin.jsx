@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Users, ShieldOff, ShieldCheck, Gift, ChevronDown, ChevronUp, ExternalLink, Loader2 } from 'lucide-react';
+import { Search, Users, ShieldOff, ShieldCheck, Gift, ChevronDown, ChevronUp, ExternalLink, Loader2, Trash2 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import PlataformaMetricas from './PlataformaMetricas';
 
@@ -57,7 +57,7 @@ function Faturas({ userId }) {
   );
 }
 
-function CartaoUsuario({ u, onAcao, ocupado }) {
+function CartaoUsuario({ u, onAcao, onExcluir, ocupado }) {
   const [aberto, setAberto] = useState(false);
   const sit = situacao(u);
   const botao = (acao, label, Icon, cor, confirmacao) => (
@@ -100,6 +100,18 @@ function CartaoUsuario({ u, onAcao, ocupado }) {
           {u.acessoLiberadoManual
             ? botao('remover_liberacao', 'Remover cortesia', Gift, '#9ca3af', `Remover a liberação gratuita de ${u.email}?`)
             : !u.bloqueadoPorAdmin && botao('liberar', 'Liberar sem pagamento', Gift, '#a78bfa', `Liberar ${u.email} sem exigir pagamento?`)}
+          <button
+            disabled={ocupado}
+            onClick={() => {
+              const digitado = window.prompt(`EXCLUIR DEFINITIVAMENTE a conta e todos os dados de ${u.email}?\nIsso cancela a assinatura no Stripe e não pode ser desfeito.\n\nDigite o e-mail da conta para confirmar:`);
+              if (digitado && digitado.trim().toLowerCase() === u.email.toLowerCase()) onExcluir(u.id);
+              else if (digitado !== null) alert('E-mail não confere. Nada foi excluído.');
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+            style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}
+          >
+            <Trash2 size={13} /> Excluir conta
+          </button>
         </div>
       )}
 
@@ -139,6 +151,20 @@ function ClientesTab() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || 'Erro ao alterar acesso');
       setUsuarios(prev => prev.map(u => (u.id === id ? { ...u, acessoLiberadoManual: d.acessoLiberadoManual, bloqueadoPorAdmin: d.bloqueadoPorAdmin } : u)));
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const handleExcluir = async (id) => {
+    setOcupado(true);
+    try {
+      const r = await apiFetch(`/api/plataforma/usuarios/${id}`, { method: 'DELETE' });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Erro ao excluir conta');
+      setUsuarios(prev => prev.filter(u => u.id !== id));
     } catch (e) {
       alert(e.message);
     } finally {
@@ -189,7 +215,7 @@ function ClientesTab() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        {filtrados.map(u => <CartaoUsuario key={u.id} u={u} onAcao={handleAcao} ocupado={ocupado} />)}
+        {filtrados.map(u => <CartaoUsuario key={u.id} u={u} onAcao={handleAcao} onExcluir={handleExcluir} ocupado={ocupado} />)}
       </div>
       {filtrados.length === 0 && <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>Nenhuma conta encontrada.</p>}
     </div>

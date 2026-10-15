@@ -389,6 +389,9 @@ app.post('/api/auth/register', async (req, res) => {
       }
     });
 
+    // E-mail de boas-vindas: best-effort, nunca impede o cadastro de funcionar
+    await enviarEmailBoasVindas(user.nome, user.email).catch(e => console.error('Boas-vindas não enviado:', e.message));
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, jti: crypto.randomUUID() },
       JWT_SECRET,
@@ -1256,6 +1259,23 @@ app.get('/api/plataforma/usuarios/:id/faturas', authenticateToken, requirePlatfo
   }
 });
 
+// Exclui uma conta a pedido do titular (LGPD). Irreversível.
+app.delete('/api/plataforma/usuarios/:id', authenticateToken, requirePlatformOwner, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const alvo = await prisma.user.findUnique({ where: { id } });
+    if (!alvo) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (alvo.role === 'admin' || id === req.user.id) {
+      return res.status(400).json({ error: 'Contas administradoras não podem ser excluídas por aqui' });
+    }
+    await excluirContaCompleta(alvo);
+    res.json({ ok: true });
+  } catch (e) {
+    logErro('Erro ao excluir conta pelo admin', e);
+    res.status(500).json({ error: 'Erro ao excluir conta' });
+  }
+});
+
 // Liberar sem pagamento, remover liberação, bloquear ou desbloquear uma conta
 app.post('/api/plataforma/usuarios/:id/acesso', authenticateToken, requirePlatformOwner, async (req, res) => {
   try {
@@ -1278,6 +1298,97 @@ app.post('/api/plataforma/usuarios/:id/acesso', authenticateToken, requirePlatfo
   } catch (e) {
     logErro('Erro ao alterar acesso de usuário', e);
     res.status(500).json({ error: 'Erro ao alterar acesso' });
+  }
+});
+
+
+// ===== Utilidades de e-mail =====
+function escapeHtml(texto) {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function enviarEmailBoasVindas(nome, email) {
+  const base = (process.env.FRONTEND_ORIGIN || 'https://projeto-academia-sable.vercel.app').split(',')[0].trim();
+  const primeiroNome = escapeHtml(String(nome || '').split(' ')[0]);
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111827">
+      <h2 style="color:#2563eb">Bem-vindo ao GymFlow${primeiroNome ? ', ' + primeiroNome : ''}! 🎉</h2>
+      <p>Sua conta foi criada e você tem <strong>30 dias grátis</strong>, sem cartão. Para sentir o valor logo de cara, faça estes 3 passos:</p>
+      <ol style="line-height:1.7">
+        <li><strong>Cadastre seus planos</strong> (mensal, trimestral...) com os valores da sua academia.</li>
+        <li><strong>Adicione seus alunos</strong> um a um ou importe uma planilha CSV em Alunos → Importar CSV.</li>
+        <li><strong>Ative a cobrança automática</strong> em Configurações: o GymFlow lembra e cobra os alunos por WhatsApp e e-mail, sem você precisar mandar mensagem.</li>
+      </ol>
+      <p><a href="${base}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Acessar o GymFlow</a></p>
+      <p style="font-size:12px;color:#6b7280">Se não foi você quem criou esta conta, ignore este e-mail.</p>
+    </div>`;
+  await enviarEmail(email, 'Bem-vindo ao GymFlow! Seus 3 primeiros passos', html);
+}
+
+// ===== Exclusão de conta (LGPD: direito de eliminação) =====
+// Cancela a assinatura no Stripe (para não continuar cobrando) e apaga todos os dados da conta.
+async function excluirContaCompleta(user) {
+  if (user.stripeSubscriptionId && stripe) {
+    try {
+      await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+    } catch (e) {
+      // Se a assinatura já não existe no Stripe, segue; qualquer outro erro aborta (não apagar e seguir cobrando)
+      if (e.code !== 'resource_missing') throw e;
+    }
+  }
+  // Apaga na ordem certa (alunos e seus pagamentos, depois planos, depois a conta)
+  await prisma.$transaction([
+    prisma.aluno.deleteMany({ where: { ownerId: user.id } }),
+    prisma.plano.deleteMany({ where: { ownerId: user.id } }),
+    prisma.user.delete({ where: { id: user.id } }),
+  ]);
+}
+
+
+// Exporta todos os dados da própria conta (LGPD: direito de acesso e portabilidade)
+app.get('/api/conta/exportar', authenticateToken, async (req, res) => {
+  try {
+    const conta = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        email: true, nome: true, nomeAcademia: true, cnpjAcademia: true, telefoneAcademia: true,
+        enderecoAcademia: true, chavePix: true, createdAt: true, subscriptionTier: true, subscriptionStatus: true,
+      },
+    });
+    const planos = await prisma.plano.findMany({ where: { ownerId: req.user.id } });
+    const alunos = await prisma.aluno.findMany({ where: { ownerId: req.user.id }, include: { pagamentos: true } });
+    res.setHeader('Content-Disposition', 'attachment; filename="meus-dados-gymflow.json"');
+    res.json({ exportadoEm: new Date().toISOString(), conta, planos, alunos });
+  } catch (e) {
+    logErro('Erro ao exportar dados da conta', e);
+    res.status(500).json({ error: 'Erro ao exportar dados' });
+  }
+});
+
+// Exclui a própria conta e todos os dados (exige senha + confirmação digitada)
+app.delete('/api/conta', authenticateToken, async (req, res) => {
+  try {
+    const { senha, confirmacao } = req.body || {};
+    if (confirmacao !== 'EXCLUIR') return res.status(400).json({ error: 'Digite EXCLUIR para confirmar' });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'Conta não encontrada' });
+    if (user.role === 'admin') return res.status(400).json({ error: 'Contas administradoras não podem ser excluídas por aqui' });
+    if (!senha || !bcrypt.compareSync(String(senha), user.password)) {
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
+    await excluirContaCompleta(user);
+    if (req.user.jti && req.user.exp) {
+      await prisma.tokenRevogado.upsert({
+        where: { jti: req.user.jti }, update: {},
+        create: { jti: req.user.jti, expiraEm: new Date(req.user.exp * 1000) },
+      }).catch(() => {});
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    logErro('Erro ao excluir conta', e);
+    res.status(500).json({ error: 'Erro ao excluir a conta. Se você tem uma assinatura ativa, tente novamente ou fale com o suporte.' });
   }
 });
 
@@ -1669,7 +1780,7 @@ async function dispararNotificacoesParaUsuario(userId, origem = 'manual') {
       const assunto = tipoMsg === '5dias'
         ? `Lembrete: sua mensalidade na ${nomeAcademia} vence em 5 dias`
         : `Mensalidade vencida na ${nomeAcademia}`;
-      const html = `<p>${texto.replace(/\n/g, '<br/>')}</p>`;
+      const html = `<p>${escapeHtml(texto).replace(/\n/g, '<br/>')}</p>`;
       try {
         await enviarEmail(aluno.email, assunto, html);
         logsExecucao.push({ ...logBase, id: Date.now() + Math.random(), canal: 'email', status: 'sucesso', mensagem: `E-mail enviado para ${aluno.email}` });
@@ -1826,4 +1937,8 @@ app.use((req, res) => {
 });
 
 // Vercel serverless handler
+if (process.env.NODE_ENV === 'test') {
+  app.__internals = { parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
+}
+
 module.exports = app;

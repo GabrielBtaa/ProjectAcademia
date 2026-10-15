@@ -2,8 +2,10 @@ import { ArrowLeft, Dumbbell } from 'lucide-react';
 
 // >>> EDITE AQUI com os dados reais da sua empresa/contato antes de divulgar <<<
 const NOME_EMPRESA = 'GymFlow';
-const EMAIL_CONTATO = 'contato@seudominio.com.br';
-const ULTIMA_ATUALIZACAO = '08/10/2026';
+// Defina VITE_CONTATO_EMAIL nas variáveis de ambiente da Vercel (e faça um novo deploy)
+// com o e-mail real de contato/encarregado. Enquanto não definir, aparece o texto padrão abaixo.
+const EMAIL_CONTATO = import.meta.env.VITE_CONTATO_EMAIL || 'contato@seudominio.com.br';
+const ULTIMA_ATUALIZACAO = '11/10/2026';
 
 const Secao = ({ titulo, children }) => (
   <section className="space-y-2">
@@ -31,7 +33,9 @@ function Privacidade() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Titular da conta:</strong> nome, e-mail, celular/WhatsApp, senha (armazenada de forma criptografada), dados da academia (nome, CNPJ, endereço, telefone, chave PIX) e dados de assinatura.</li>
           <li><strong>Alunos (inseridos pela academia):</strong> nome, CPF, WhatsApp, e-mail, data de nascimento, plano, vencimento e histórico de pagamentos.</li>
-          <li><strong>Dados técnicos:</strong> data do último acesso e registros de erros, para segurança e funcionamento do sistema.</li>
+          <li><strong>Dados técnicos:</strong> data do último acesso, endereço IP, tipo de navegador e registros de erros, para segurança e funcionamento do sistema.</li>
+          <li><strong>Uso do sistema:</strong> datas de marcos de uso (como o cadastro do primeiro aluno), código de indicação e, se você cancelar, o motivo informado (opcional).</li>
+          <li><strong>Pagamento:</strong> os dados do cartão são tratados exclusivamente pela Stripe; o {NOME_EMPRESA} não armazena número de cartão.</li>
         </ul>
       </Secao>
 
@@ -53,19 +57,34 @@ function Privacidade() {
         <p>A academia é responsável por ter base legal para cadastrar e contatar seus alunos (por exemplo, a execução do contrato de matrícula) e por informá-los sobre o uso dos dados. Ao usar o envio automático de mensagens, a academia declara que os alunos podem ser contatados para fins de cobrança e avisos do contrato.</p>
       </Secao>
 
-      <Secao titulo="7. Segurança">
+      <Secao titulo="7. Dados de alunos menores de idade">
+        <p>Se a academia cadastrar alunos menores de 18 anos, ela é responsável por obter o consentimento específico de pelo menos um dos pais ou do responsável legal e por tratar esses dados no melhor interesse do menor, conforme o art. 14 da LGPD. Recomendamos cadastrar apenas os dados estritamente necessários.</p>
+      </Secao>
+
+      <Secao titulo="8. Cookies e armazenamento local">
+        <p>O {NOME_EMPRESA} <strong>não usa cookies de publicidade nem de rastreamento</strong>. Usamos apenas o armazenamento local do navegador (localStorage), para:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li><strong>Essencial:</strong> manter você conectado (token de sessão) e lembrar a preferência de menu recolhido.</li>
+          <li><strong>Preferência:</strong> guardar o tema claro/escuro.</li>
+          <li><strong>Indicação:</strong> se você chegar por um link de indicação, guardamos o código temporariamente apenas para registrar quem indicou ao criar a conta.</li>
+          <li><strong>Diagnóstico:</strong> o monitoramento de erros (Sentry), quando ativo, recebe dados técnicos de falhas (como página e navegador) para corrigirmos problemas, sem finalidade publicitária.</li>
+        </ul>
+        <p>A página de pagamento da Stripe é de responsabilidade da Stripe e pode usar cookies próprios, conforme a política dela. Você pode limpar o armazenamento local nas configurações do navegador; isso apenas desconecta sua sessão.</p>
+      </Secao>
+
+      <Secao titulo="9. Segurança">
         <p>Adotamos medidas como senhas criptografadas, comunicação protegida (HTTPS), limite de tentativas de login e controle de acesso por conta. Nenhum sistema é 100% imune, mas trabalhamos para reduzir riscos e corrigir falhas rapidamente.</p>
       </Secao>
 
-      <Secao titulo="8. Retenção e exclusão">
-        <p>Mantemos os dados enquanto a conta estiver ativa. Após o cancelamento, os dados podem ser mantidos pelo período necessário para cumprir obrigações legais e depois excluídos ou anonimizados. Você pode solicitar a exclusão antes disso, conforme item 9.</p>
+      <Secao titulo="10. Retenção e exclusão">
+        <p>Mantemos os dados enquanto a conta estiver ativa. Você pode <strong>excluir sua conta a qualquer momento</strong> em Configurações → Privacidade e meus dados; isso apaga definitivamente seus dados e cancela a assinatura. Informações que a lei exija guardar (como registros fiscais de pagamento, mantidos pela Stripe) podem ser retidas pelo prazo legal.</p>
       </Secao>
 
-      <Secao titulo="9. Seus direitos (LGPD)">
-        <p>Você pode solicitar: confirmação de tratamento, acesso, correção, anonimização ou eliminação de dados, portabilidade, informação sobre compartilhamento e revogação de consentimento. Para exercer esses direitos, escreva para <strong>{EMAIL_CONTATO}</strong>. Se você é aluno de uma academia, solicite primeiro à própria academia, que é a controladora dos seus dados.</p>
+      <Secao titulo="11. Seus direitos (LGPD)">
+        <p>Você pode solicitar: confirmação de tratamento, acesso, correção, anonimização ou eliminação de dados, portabilidade, informação sobre compartilhamento e revogação de consentimento. Parte disso você faz sozinho em Configurações (<strong>baixar meus dados</strong> e <strong>excluir minha conta</strong>). Para o restante, escreva para <strong>{EMAIL_CONTATO}</strong>, que é também nosso canal do encarregado de proteção de dados. Se você é aluno de uma academia, solicite primeiro à própria academia, que é a controladora dos seus dados. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
       </Secao>
 
-      <Secao titulo="10. Alterações">
+      <Secao titulo="12. Alterações">
         <p>Podemos atualizar esta política. Mudanças relevantes serão comunicadas pelo sistema ou por e-mail.</p>
       </Secao>
     </>
@@ -114,8 +133,20 @@ function Termos() {
         <p>Na máxima extensão permitida em lei, o {NOME_EMPRESA} não responde por lucros cessantes ou danos indiretos decorrentes do uso do sistema. Recomendamos que você mantenha cópias dos dados que considerar essenciais.</p>
       </Secao>
 
-      <Secao titulo="9. Alterações e contato">
-        <p>Estes Termos podem ser atualizados, e mudanças relevantes serão avisadas. Dúvidas: <strong>{EMAIL_CONTATO}</strong>.</p>
+      <Secao titulo="9. Programa de indicação">
+        <p>Quem indicar uma academia que se cadastre pelo seu link e assine um plano pago recebe um crédito equivalente a um mês do próprio plano, abatido na próxima fatura. Cada indicado gera no máximo uma recompensa. Podemos suspender recompensas em caso de fraude ou autoindicação.</p>
+      </Secao>
+
+      <Secao titulo="10. Suspensão e encerramento">
+        <p>Podemos suspender ou encerrar contas que violem estes Termos, causem risco à plataforma ou estejam inadimplentes. Você pode excluir sua conta a qualquer momento em Configurações, o que apaga seus dados conforme a Política de Privacidade.</p>
+      </Secao>
+
+      <Secao titulo="11. Quem pode usar">
+        <p>O {NOME_EMPRESA} é destinado a pessoas maiores de 18 anos, em nome próprio ou de uma empresa (academia ou estúdio).</p>
+      </Secao>
+
+      <Secao titulo="12. Lei aplicável e contato">
+        <p>Estes Termos são regidos pelas leis brasileiras. Estes Termos podem ser atualizados, e mudanças relevantes serão avisadas. Dúvidas: <strong>{EMAIL_CONTATO}</strong>.</p>
       </Secao>
     </>
   );

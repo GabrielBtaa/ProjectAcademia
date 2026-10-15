@@ -17,24 +17,24 @@
 ## 1. Produto / Onboarding
 
 - [ ] **Importação de alunos via CSV/planilha.** Prioridade alta — é o maior fator de fricção pra quem já usa um concorrente (Tecnofit) migrar pro GymFlow. Endpoint sugerido: `POST /api/alunos/importar-csv`, aceitando um arquivo com colunas nome/cpf/whatsapp/email/dataNascimento/plano/dataVencimento, validando linha a linha e retornando um relatório de sucesso/erro por linha.
-- [ ] **Medir e reduzir o tempo de onboarding** (cadastro → primeiro aluno cadastrado → primeira cobrança automática configurada). Instrumentar eventos-chave (ex: tabela `EventoOnboarding` ou envio para uma ferramenta de analytics) para saber onde as pessoas travam.
-- [ ] **Tela de "primeiro sucesso" (wow moment).** Depois do setup inicial, mostrar de forma clara que a automação de cobrança está ativa e vai economizar tempo — reforça o valor do produto logo de cara.
+- [x] **Medir e reduzir o tempo de onboarding** (cadastro → primeiro aluno cadastrado → primeira cobrança automática configurada). Instrumentar eventos-chave (ex: tabela `EventoOnboarding` ou envio para uma ferramenta de analytics) para saber onde as pessoas travam.
+- [x] **Tela de "primeiro sucesso" (wow moment).** Depois do setup inicial, mostrar de forma clara que a automação de cobrança está ativa e vai economizar tempo — reforça o valor do produto logo de cara.
 
 ## 2. Retenção e Churn
 
-- [ ] **Página/endpoint de métricas de negócio para o admin da plataforma** (não confundir com o dashboard do cliente): MRR, número de assinantes ativos, churn mensal, LTV médio. Pode começar simples: um endpoint `GET /api/admin/metricas` que agrega dados de `User` (subscriptionStatus, subscriptionTier, createdAt, canceledAt).
-- [ ] **Capturar motivo de cancelamento.** O endpoint `POST /api/billing/cancelar` (já existe) deveria aceitar um campo opcional `motivo` no corpo da requisição e salvar num novo campo/tabela (`motivoCancelamento` no `User`, ou uma tabela `Cancelamento` separada com `userId`, `motivo`, `criadoEm`). No frontend, adicionar um `<select>` ou `<textarea>` opcional na tela de confirmação de cancelamento em `Configuracoes.jsx`.
-- [ ] **E-mail de reengajamento para contas inativas.** Se `user.updatedAt` (ou um novo campo `ultimoAcessoEm`, atualizado a cada login) passar de N dias sem atividade, disparar um e-mail via Resend lembrando do valor do produto. Pode reaproveitar o padrão de `enviarEmail()` já existente em `api/index.js`, chamado por um novo cron similar ao `whatsapp-diario`.
+- [x] **Página/endpoint de métricas de negócio para o admin da plataforma** (não confundir com o dashboard do cliente): MRR, número de assinantes ativos, churn mensal, LTV médio. Pode começar simples: um endpoint `GET /api/admin/metricas` que agrega dados de `User` (subscriptionStatus, subscriptionTier, createdAt, canceledAt).
+- [x] **Capturar motivo de cancelamento.** O endpoint `POST /api/billing/cancelar` (já existe) deveria aceitar um campo opcional `motivo` no corpo da requisição e salvar num novo campo/tabela (`motivoCancelamento` no `User`, ou uma tabela `Cancelamento` separada com `userId`, `motivo`, `criadoEm`). No frontend, adicionar um `<select>` ou `<textarea>` opcional na tela de confirmação de cancelamento em `Configuracoes.jsx`.
+- [x] **E-mail de reengajamento para contas inativas.** Se `user.updatedAt` (ou um novo campo `ultimoAcessoEm`, atualizado a cada login) passar de N dias sem atividade, disparar um e-mail via Resend lembrando do valor do produto. Pode reaproveitar o padrão de `enviarEmail()` já existente em `api/index.js`, chamado por um novo cron similar ao `whatsapp-diario`.
 
 ## 3. Monetização
 
-- [ ] **Upgrade automático de plano ao atingir o limite de alunos.** Hoje `maxAlunos` bloqueia a criação de novos alunos (`requireActiveSubscription` / validação no `POST /api/alunos`). Ao invés de só bloquear, mostrar um CTA de upgrade direto ali (modal ou banner), com link para o Stripe Checkout do tier seguinte.
+- [x] **Upgrade automático de plano ao atingir o limite de alunos.** Hoje `maxAlunos` bloqueia a criação de novos alunos (`requireActiveSubscription` / validação no `POST /api/alunos`). Ao invés de só bloquear, mostrar um CTA de upgrade direto ali (modal ou banner), com link para o Stripe Checkout do tier seguinte.
 - [ ] **Considerar testar trial "com fricção" (pedindo cartão) via Stripe Checkout em modo trial**, como teste A/B contra o modelo atual (sem cartão). Não implementar sem confirmação explícita do dono do produto — é uma decisão de negócio, não só técnica.
 
 ## 4. Confiabilidade / Observabilidade
 
-- [ ] **Endpoint de health check.** Criar `GET /api/health` retornando `{ ok: true, db: 'connected' }` (fazendo um `SELECT 1` simples via Prisma) para permitir monitoramento externo (ex: UptimeRobot, BetterStack) apontando pra essa rota.
-- [ ] **Integração com Sentry (ou similar) para captura de erros em produção.** Hoje os erros só vão para `console.error`, visíveis apenas nos logs da Vercel. Adicionar `@sentry/node` no backend (`api/index.js`) envolvendo o error handler global, e `@sentry/react` no frontend.
+- [x] **Endpoint de health check.** Criar `GET /api/health` retornando `{ ok: true, db: 'connected' }` (fazendo um `SELECT 1` simples via Prisma) para permitir monitoramento externo (ex: UptimeRobot, BetterStack) apontando pra essa rota.
+- [x] **Integração com Sentry (ou similar) para captura de erros em produção.** Hoje os erros só vão para `console.error`, visíveis apenas nos logs da Vercel. Adicionar `@sentry/node` no backend (`api/index.js`) envolvendo o error handler global, e `@sentry/react` no frontend.
 - [ ] **Confirmar que o backup automático do Supabase está ativo** (não é uma tarefa de código — é uma verificação de configuração no painel do Supabase, mas deve ser lembrada/documentada aqui).
 
 ## 5. Distribuição / Growth
@@ -44,7 +44,7 @@
 
 ## 6. Compliance / Segurança de dados
 
-- [ ] **Política de Privacidade e Termos de Uso.** Adicionar páginas estáticas (`/privacidade`, `/termos`) linkadas no rodapé da Landing Page e na tela de cadastro (`AuthCard.jsx`, formulário de registro) — LGPD exige consentimento explícito ao coletar dados de terceiros (CPF, WhatsApp, e-mail dos alunos).
+- [x] **Política de Privacidade e Termos de Uso.** Adicionar páginas estáticas (`/privacidade`, `/termos`) linkadas no rodapé da Landing Page e na tela de cadastro (`AuthCard.jsx`, formulário de registro) — LGPD exige consentimento explícito ao coletar dados de terceiros (CPF, WhatsApp, e-mail dos alunos).
 - [ ] **Avaliar criptografia de campos sensíveis** (CPF do aluno, por exemplo) em repouso no banco, ou ao menos garantir que backups e exports não vazem esses dados sem necessidade.
 
 ---

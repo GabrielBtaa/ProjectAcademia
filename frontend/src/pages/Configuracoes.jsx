@@ -13,6 +13,8 @@ import {
   Gift,
   Copy,
   Share2,
+  Download,
+  Trash2,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -168,6 +170,51 @@ export default function Configuracoes() {
       setLinkCopiado(true);
       setTimeout(() => setLinkCopiado(false), 2000);
     } catch { window.prompt('Copie o link:', linkIndicacao); }
+  };
+
+  // ===== Privacidade: exportar e excluir conta (LGPD) =====
+  const [mostrarExcluirConta, setMostrarExcluirConta] = useState(false);
+  const [senhaExcluir, setSenhaExcluir] = useState('');
+  const [confirmacaoExcluir, setConfirmacaoExcluir] = useState('');
+  const [processandoPrivacidade, setProcessandoPrivacidade] = useState(false);
+  const [erroPrivacidade, setErroPrivacidade] = useState(null);
+
+  const handleExportarDados = async () => {
+    setProcessandoPrivacidade(true);
+    setErroPrivacidade(null);
+    try {
+      const res = await apiFetch('/api/conta/exportar');
+      if (!res.ok) throw new Error('Erro ao exportar seus dados');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meus-dados-gymflow.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErroPrivacidade(e.message);
+    } finally {
+      setProcessandoPrivacidade(false);
+    }
+  };
+
+  const handleExcluirConta = async () => {
+    setProcessandoPrivacidade(true);
+    setErroPrivacidade(null);
+    try {
+      const res = await apiFetch('/api/conta', {
+        method: 'DELETE',
+        body: JSON.stringify({ senha: senhaExcluir, confirmacao: confirmacaoExcluir }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro ao excluir a conta');
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    } catch (e) {
+      setErroPrivacidade(e.message);
+      setProcessandoPrivacidade(false);
+    }
   };
 
   // ===== Assinatura =====
@@ -704,6 +751,62 @@ export default function Configuracoes() {
           </div>
         </div>
       )}
+
+      {/* Privacidade e dados (LGPD) */}
+      <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
+        <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+          <Shield size={17} style={{ color: '#60a5fa' }} />
+          <h4 className="font-semibold text-heading text-sm">Privacidade e meus dados</h4>
+        </div>
+        <div className="py-4 space-y-3">
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Você pode baixar uma cópia de todos os dados da sua conta ou excluí-la definitivamente. Veja também a{' '}
+            <a href="/privacidade" target="_blank" rel="noreferrer" className="underline text-blue-400">Política de Privacidade</a> e os{' '}
+            <a href="/termos" target="_blank" rel="noreferrer" className="underline text-blue-400">Termos de Uso</a>.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={handleExportarDados} disabled={processandoPrivacidade}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+              style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>
+              <Download size={13} /> Baixar meus dados
+            </button>
+            {!mostrarExcluirConta && (
+              <button onClick={() => setMostrarExcluirConta(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+                <Trash2 size={13} /> Excluir minha conta
+              </button>
+            )}
+          </div>
+
+          {mostrarExcluirConta && (
+            <div className="rounded-lg p-3 space-y-2" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
+              <p className="text-xs flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#f87171' }} />
+                Isso apaga <strong>definitivamente</strong> sua conta, seus alunos, planos e pagamentos, e cancela sua assinatura imediatamente (sem reembolso do período já pago). Não dá para desfazer.
+              </p>
+              <input type="password" value={senhaExcluir} onChange={e => setSenhaExcluir(e.target.value)} placeholder="Sua senha"
+                className="w-full text-xs rounded-lg px-2.5 py-2"
+                style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }} />
+              <input value={confirmacaoExcluir} onChange={e => setConfirmacaoExcluir(e.target.value)} placeholder='Digite EXCLUIR para confirmar'
+                className="w-full text-xs rounded-lg px-2.5 py-2"
+                style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }} />
+              <div className="flex gap-2">
+                <button onClick={handleExcluirConta} disabled={processandoPrivacidade || !senhaExcluir || confirmacaoExcluir !== 'EXCLUIR'}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-40" style={{ background: '#ef4444', color: '#fff' }}>
+                  {processandoPrivacidade ? 'Excluindo...' : 'Excluir definitivamente'}
+                </button>
+                <button onClick={() => { setMostrarExcluirConta(false); setSenhaExcluir(''); setConfirmacaoExcluir(''); setErroPrivacidade(null); }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                  style={{ background: 'var(--surface-alt-1)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+          {erroPrivacidade && <p className="text-xs" style={{ color: '#f87171' }}>{erroPrivacidade}</p>}
+        </div>
+      </div>
 
       {/* Aparência e Sistema */}
       <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
