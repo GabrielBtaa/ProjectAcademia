@@ -149,6 +149,7 @@ export default function Configuracoes() {
         whatsappMsgVencido: data.whatsappMsgVencido || '',
         whatsappAutoEnviar: !!data.whatsappAutoEnviar,
         whatsappHoraEnvio: typeof data.whatsappHoraEnvio === 'number' ? data.whatsappHoraEnvio : 9,
+        whatsappDiasMaxAtraso: typeof data.whatsappDiasMaxAtraso === 'number' ? data.whatsappDiasMaxAtraso : 5,
         emailAutoEnviar: !!data.emailAutoEnviar,
       }))
       .catch(() => {});
@@ -293,6 +294,7 @@ export default function Configuracoes() {
           whatsappMsgVencido: dadosAcademia.whatsappMsgVencido,
           whatsappAutoEnviar: dadosAcademia.whatsappAutoEnviar,
           whatsappHoraEnvio: dadosAcademia.whatsappHoraEnvio,
+          whatsappDiasMaxAtraso: dadosAcademia.whatsappDiasMaxAtraso,
           emailAutoEnviar: dadosAcademia.emailAutoEnviar,
           ...overridesValidos,
         }),
@@ -335,6 +337,12 @@ export default function Configuracoes() {
     }
     updateAcademia('whatsappAutoEnviar', novoValor);
     handleSalvarAcademia({ whatsappAutoEnviar: novoValor });
+  };
+
+  const handleChangeDiasMaxAtraso = (e) => {
+    const dias = Number(e.target.value);
+    updateAcademia('whatsappDiasMaxAtraso', dias);
+    handleSalvarAcademia({ whatsappDiasMaxAtraso: dias });
   };
 
   const handleChangeHoraEnvio = (e) => {
@@ -532,6 +540,24 @@ export default function Configuracoes() {
                 </p>
               </div>
               <Toggle checked={!!dadosAcademia.whatsappAutoEnviar} onChange={handleToggleAutoEnviar} />
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap pt-1" style={{ borderTop: '1px solid var(--border-2)' }}>
+              <label htmlFor="diasMaxAtraso" className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+                Parar de cobrar após
+              </label>
+              <select
+                id="diasMaxAtraso"
+                value={dadosAcademia.whatsappDiasMaxAtraso ?? 5}
+                onChange={handleChangeDiasMaxAtraso}
+                className="text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 10, 15, 30].map(n => (
+                  <option key={n} value={n}>{n} dia{n > 1 ? 's' : ''}</option>
+                ))}
+              </select>
+              <span className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>de atraso (depois disso o aluno não recebe mais cobrança)</span>
             </div>
 
             {dadosAcademia.whatsappAutoEnviar && (

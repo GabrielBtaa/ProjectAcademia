@@ -464,6 +464,66 @@ test('WhatsApp: excluir a conta apaga também a instância no Evolution', async 
   assert.ok(chamadasDe('/instance/delete/gymflow-del').length >= 1);
 });
 
+
+// ---------- COBRANÇA: PARA DE COBRAR APÓS N DIAS DE ATRASO ----------
+function diaRelativo(diasAFrente) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + diasAFrente);
+  return d;
+}
+async function numerosEnviadosPara(user) {
+  const { dispararNotificacoesParaUsuario } = app.__internals;
+  const antes = chamadasDe('/message/sendText/').length;
+  await dispararNotificacoesParaUsuario(user.id, 'manual');
+  return chamadasDe('/message/sendText/').slice(antes).map(c => c.corpo.number).sort();
+}
+function alunoComVencimento(ownerId, numero, diasAFrente) {
+  db.alunos.push({ id: seq++, nome: `Aluno ${numero}`, whatsapp: numero, dataVencimento: diaRelativo(diasAFrente), ownerId });
+}
+
+test('cobrança: para de cobrar quem passou do limite de dias de atraso (padrão 5)', async () => {
+  const u = await criarUsuario({ whatsappInstancia: 'gymflow-cob' });
+  alunoComVencimento(u.id, '11900000001', 0);    // vence hoje -> cobra
+  alunoComVencimento(u.id, '11900000002', -3);   // 3 dias de atraso -> cobra
+  alunoComVencimento(u.id, '11900000003', -5);   // 5 dias (no limite) -> cobra
+  alunoComVencimento(u.id, '11900000004', -6);   // 6 dias -> NÃO cobra mais
+  alunoComVencimento(u.id, '11900000005', -30);  // 30 dias -> NÃO cobra
+  alunoComVencimento(u.id, '11900000006', 5);    // falta 5 dias -> lembrete
+  alunoComVencimento(u.id, '11900000007', 2);    // falta 2 dias -> nada
+  const enviados = await numerosEnviadosPara(u);
+  assert.deepEqual(enviados, ['5511900000001', '5511900000002', '5511900000003', '5511900000006']);
+});
+
+test('cobrança: o limite é configurável por academia', async () => {
+  const u = await criarUsuario({ whatsappInstancia: 'gymflow-cob2', whatsappDiasMaxAtraso: 2 });
+  alunoComVencimento(u.id, '11911110001', -2);   // no limite -> cobra
+  alunoComVencimento(u.id, '11911110002', -3);   // passou -> não cobra
+  const enviados = await numerosEnviadosPara(u);
+  assert.deepEqual(enviados, ['5511911110001']);
+});
+
+test('cobrança: o limite vale também para o disparo automático (cron)', async () => {
+  const { dispararNotificacoesParaUsuario } = app.__internals;
+  const u = await criarUsuario({ whatsappInstancia: 'gymflow-cob3', whatsappAutoEnviar: true });
+  alunoComVencimento(u.id, '11922220001', -40);
+  const antes = chamadasDe('/message/sendText/').length;
+  await dispararNotificacoesParaUsuario(u.id, 'cron');
+  assert.equal(chamadasDe('/message/sendText/').length, antes);
+});
+
+test('cobrança: configuração valida o limite (1 a 90) e salva', async () => {
+  const u = await criarUsuario();
+  const tk = tokenDe(u);
+  assert.equal((await chamar('PUT', '/api/conta/academia', { token: tk, corpo: { whatsappDiasMaxAtraso: 0 } })).status, 400);
+  assert.equal((await chamar('PUT', '/api/conta/academia', { token: tk, corpo: { whatsappDiasMaxAtraso: 91 } })).status, 400);
+  assert.equal((await chamar('PUT', '/api/conta/academia', { token: tk, corpo: { whatsappDiasMaxAtraso: 2.5 } })).status, 400);
+  const r = await chamar('PUT', '/api/conta/academia', { token: tk, corpo: { whatsappDiasMaxAtraso: 7 } });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).whatsappDiasMaxAtraso, 7);
+  assert.equal(db.users.find(x => x.id === u.id).whatsappDiasMaxAtraso, 7);
+});
+
 // ---------- utilitários ----------
 test('importação CSV: separador ; e vírgula entre aspas', () => {
   const { parseCsvTexto } = app.__internals;

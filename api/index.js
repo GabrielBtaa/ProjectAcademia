@@ -1099,12 +1099,22 @@ app.get('/api/conta/academia', authenticateToken, async (req, res) => {
     whatsappMsgVencido: user.whatsappMsgVencido || '',
     whatsappAutoEnviar: user.whatsappAutoEnviar,
     whatsappHoraEnvio: typeof user.whatsappHoraEnvio === 'number' ? user.whatsappHoraEnvio : 9,
+    whatsappDiasMaxAtraso: typeof user.whatsappDiasMaxAtraso === 'number' ? user.whatsappDiasMaxAtraso : 5,
     emailAutoEnviar: user.emailAutoEnviar,
   });
 });
 
 app.put('/api/conta/academia', authenticateToken, async (req, res) => {
-  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar, whatsappHoraEnvio, emailAutoEnviar } = req.body || {};
+  const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar, whatsappHoraEnvio, whatsappDiasMaxAtraso, emailAutoEnviar } = req.body || {};
+
+  let diasMaxAtrasoValido;
+  if (whatsappDiasMaxAtraso !== undefined) {
+    const n = Number(whatsappDiasMaxAtraso);
+    if (!Number.isInteger(n) || n < 1 || n > 90) {
+      return res.status(400).json({ error: 'whatsappDiasMaxAtraso deve ser um número inteiro entre 1 e 90' });
+    }
+    diasMaxAtrasoValido = n;
+  }
 
   let horaEnvioValida;
   if (whatsappHoraEnvio !== undefined) {
@@ -1134,6 +1144,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
         whatsappMsgVencido: whatsappMsgVencido ?? undefined,
         whatsappAutoEnviar: typeof whatsappAutoEnviar === 'boolean' ? whatsappAutoEnviar : undefined,
         whatsappHoraEnvio: horaEnvioValida,
+        whatsappDiasMaxAtraso: diasMaxAtrasoValido,
         emailAutoEnviar: typeof emailAutoEnviar === 'boolean' ? emailAutoEnviar : undefined,
         automacaoConfiguradaEm: ligandoAutomacaoAgora ? new Date() : undefined,
       },
@@ -1148,6 +1159,7 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
       whatsappMsgVencido: updated.whatsappMsgVencido || '',
       whatsappAutoEnviar: updated.whatsappAutoEnviar,
       whatsappHoraEnvio: updated.whatsappHoraEnvio,
+      whatsappDiasMaxAtraso: updated.whatsappDiasMaxAtraso,
       emailAutoEnviar: updated.emailAutoEnviar,
       automacaoConfiguradaAgora: ligandoAutomacaoAgora,
     });
@@ -1812,6 +1824,7 @@ async function dispararNotificacoesParaUsuario(userId, origem = 'manual') {
     msgVencido: usuario?.whatsappMsgVencido,
     emailAutoEnviar: usuario?.emailAutoEnviar,
     whatsappAutoEnviar: usuario?.whatsappAutoEnviar,
+    diasMaxAtraso: typeof usuario?.whatsappDiasMaxAtraso === 'number' ? usuario.whatsappDiasMaxAtraso : 5,
   };
   // No disparo manual, o clique do usuário já é a autorização — envia pelos canais disponíveis.
   // No disparo automático (cron), respeita o que está habilitado nas configurações.
@@ -1837,7 +1850,9 @@ async function dispararNotificacoesParaUsuario(userId, origem = 'manual') {
 
     let tipoMsg = null;
     if (diffDias === 5) tipoMsg = '5dias';
-    else if (diffDias <= 0) tipoMsg = 'vencido';
+    // Cobra só enquanto o atraso não passou do limite: depois disso o aluno provavelmente
+    // não volta, e continuar mandando mensagem só gera incômodo (e risco de bloqueio do número)
+    else if (diffDias <= 0 && -diffDias <= config.diasMaxAtraso) tipoMsg = 'vencido';
     if (!tipoMsg) continue;
 
     const dataStr = venc.toLocaleDateString('pt-BR');
@@ -2038,7 +2053,7 @@ app.use((req, res) => {
 
 // Vercel serverless handler
 if (process.env.NODE_ENV === 'test') {
-  app.__internals = { enviarWhatsApp, parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
+  app.__internals = { dispararNotificacoesParaUsuario, enviarWhatsApp, parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
 }
 
 module.exports = app;
