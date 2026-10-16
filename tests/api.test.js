@@ -6,6 +6,8 @@ process.env.JWT_SECRET = 'segredo-de-teste';
 process.env.PLATFORM_ADMIN_EMAIL = 'dono@teste.com';
 delete process.env.STRIPE_SECRET_KEY;
 delete process.env.RESEND_API_KEY;
+process.env.EVOLUTION_API_URL = 'http://evolution.test';
+process.env.EVOLUTION_API_KEY = 'chave-global';
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -91,6 +93,27 @@ Module._load = function (request, ...resto) {
 };
 const app = require('../api/index.js');
 Module._load = carregarOriginal;
+
+
+// ---------- Evolution API falso (WhatsApp) ----------
+const fetchReal = globalThis.fetch;
+const chamadasEvolution = [];
+let estadoEvolution = 'close';
+globalThis.fetch = async (url, opts = {}) => {
+  const alvo = String(url);
+  if (!alvo.startsWith('http://evolution.test')) return fetchReal(url, opts);
+  const caminho = alvo.replace('http://evolution.test', '');
+  const metodo = opts.method || 'GET';
+  chamadasEvolution.push({ metodo, caminho, corpo: opts.body ? JSON.parse(opts.body) : null, apikey: opts.headers?.apikey });
+  const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
+  if (metodo === 'POST' && caminho === '/instance/create') return json({ instance: { instanceName: 'x' } }, 201);
+  if (caminho.startsWith('/instance/connectionState/')) return json({ instance: { state: estadoEvolution } });
+  if (caminho.startsWith('/instance/connect/')) return json({ base64: 'data:image/png;base64,QRFAKE', code: 'abc' });
+  if (caminho.startsWith('/instance/logout/') || caminho.startsWith('/instance/delete/')) return json({ status: 'SUCCESS' });
+  if (caminho.startsWith('/message/sendText/')) return json({ key: { id: '1' } }, 201);
+  return json({ error: 'rota desconhecida' }, 404);
+};
+const chamadasDe = (inicio) => chamadasEvolution.filter(c => c.caminho.startsWith(inicio));
 
 // ---------- utilidades ----------
 let servidor;
@@ -343,6 +366,102 @@ test('LGPD: conta admin não pode ser excluída pelo próprio endpoint', async (
   const adm = await criarUsuario({ role: 'admin' });
   const r = await chamar('DELETE', '/api/conta', { token: tokenDe(adm), corpo: { senha: SENHA, confirmacao: 'EXCLUIR' } });
   assert.equal(r.status, 400);
+});
+
+
+// ---------- WHATSAPP POR ACADEMIA ----------
+test('WhatsApp: conectar cria a instância própria do cliente e devolve o QR', async () => {
+  const u = await criarUsuario();
+  estadoEvolution = 'close';
+  const antes = chamadasDe('/instance/create').length;
+  const r = await chamar('POST', '/api/whatsapp/conectar', { token: tokenDe(u) });
+  assert.equal(r.status, 200);
+  const dados = await r.json();
+  assert.equal(dados.estado, 'connecting');
+  assert.equal(dados.qrcode, 'data:image/png;base64,QRFAKE');
+  assert.equal(db.users.find(x => x.id === u.id).whatsappInstancia, `gymflow-${u.id}`);
+  const criacoes = chamadasDe('/instance/create').slice(antes);
+  assert.equal(criacoes.length, 1);
+  assert.equal(criacoes[0].corpo.instanceName, `gymflow-${u.id}`);
+  assert.equal(criacoes[0].apikey, 'chave-global');
+
+  // segunda chamada reaproveita a instância (não cria outra) e devolve novo QR
+  await chamar('POST', '/api/whatsapp/conectar', { token: tokenDe(u) });
+  assert.equal(chamadasDe('/instance/create').slice(antes).length, 1);
+});
+
+test('WhatsApp: já conectado não pede novo QR', async () => {
+  const u = await criarUsuario({ whatsappInstancia: 'gymflow-x' });
+  estadoEvolution = 'open';
+  const antes = chamadasDe('/instance/connect/').length;
+  const dados = await (await chamar('POST', '/api/whatsapp/conectar', { token: tokenDe(u) })).json();
+  assert.equal(dados.estado, 'open');
+  assert.equal(chamadasDe('/instance/connect/').length, antes);
+});
+
+test('WhatsApp: cada cliente tem a sua instância (isolamento)', async () => {
+  estadoEvolution = 'close';
+  const a = await criarUsuario();
+  const b = await criarUsuario();
+  await chamar('POST', '/api/whatsapp/conectar', { token: tokenDe(a) });
+  await chamar('POST', '/api/whatsapp/conectar', { token: tokenDe(b) });
+  const ia = db.users.find(x => x.id === a.id).whatsappInstancia;
+  const ib = db.users.find(x => x.id === b.id).whatsappInstancia;
+  assert.notEqual(ia, ib);
+});
+
+test('WhatsApp: status reflete o estado real do Evolution', async () => {
+  const sem = await criarUsuario();
+  assert.equal((await (await chamar('GET', '/api/whatsapp/status', { token: tokenDe(sem) })).json()).estado, 'sem_instancia');
+  const com = await criarUsuario({ whatsappInstancia: 'gymflow-y' });
+  estadoEvolution = 'open';
+  assert.equal((await (await chamar('GET', '/api/whatsapp/status', { token: tokenDe(com) })).json()).estado, 'open');
+  estadoEvolution = 'close';
+  assert.equal((await (await chamar('GET', '/api/whatsapp/status', { token: tokenDe(com) })).json()).estado, 'close');
+});
+
+test('WhatsApp: conta sem acesso (bloqueada) não cria instância', async () => {
+  const u = await criarUsuario({ bloqueadoPorAdmin: true });
+  const antes = chamadasDe('/instance/create').length;
+  const r = await chamar('POST', '/api/whatsapp/conectar', { token: tokenDe(u) });
+  assert.equal(r.status, 402);
+  assert.equal(chamadasDe('/instance/create').length, antes);
+});
+
+test('WhatsApp: não deixa ligar o envio automático sem WhatsApp conectado', async () => {
+  const sem = await criarUsuario();
+  const r = await chamar('PUT', '/api/conta/academia', { token: tokenDe(sem), corpo: { whatsappAutoEnviar: true } });
+  assert.equal(r.status, 400);
+  assert.equal(db.users.find(x => x.id === sem.id).whatsappAutoEnviar, undefined);
+
+  const com = await criarUsuario({ whatsappInstancia: 'gymflow-z' });
+  const r2 = await chamar('PUT', '/api/conta/academia', { token: tokenDe(com), corpo: { whatsappAutoEnviar: true } });
+  assert.equal(r2.status, 200);
+});
+
+test('WhatsApp: mensagem sai pela instância da própria academia e falha sem instância', async () => {
+  const { enviarWhatsApp } = app.__internals;
+  const antes = chamadasDe('/message/sendText/').length;
+  await enviarWhatsApp('5511999999999', 'Olá', 'gymflow-42');
+  const envio = chamadasDe('/message/sendText/').slice(antes)[0];
+  assert.equal(envio.caminho, '/message/sendText/gymflow-42');
+  assert.deepEqual(envio.corpo, { number: '5511999999999', text: 'Olá' });
+  await assert.rejects(() => enviarWhatsApp('5511999999999', 'Olá', null), /não conectado/i);
+});
+
+test('WhatsApp: desconectar faz logout e desliga o envio automático', async () => {
+  const u = await criarUsuario({ whatsappInstancia: 'gymflow-w', whatsappAutoEnviar: true });
+  const r = await chamar('POST', '/api/whatsapp/desconectar', { token: tokenDe(u) });
+  assert.equal(r.status, 200);
+  assert.ok(chamadasDe('/instance/logout/gymflow-w').length >= 1);
+  assert.equal(db.users.find(x => x.id === u.id).whatsappAutoEnviar, false);
+});
+
+test('WhatsApp: excluir a conta apaga também a instância no Evolution', async () => {
+  const u = await criarUsuario({ whatsappInstancia: 'gymflow-del' });
+  const r = await chamar('DELETE', '/api/conta', { token: tokenDe(u), corpo: { senha: SENHA, confirmacao: 'EXCLUIR' } });
+  assert.equal(r.status, 200);
+  assert.ok(chamadasDe('/instance/delete/gymflow-del').length >= 1);
 });
 
 // ---------- utilitários ----------

@@ -122,7 +122,7 @@ function Termos() {
       </Secao>
 
       <Secao titulo="6. Mensagens automáticas">
-        <p>O envio automático de mensagens depende de serviços de terceiros (como WhatsApp) e pode falhar ou atrasar por motivos fora do nosso controle. Você é responsável pelo conteúdo das mensagens que configurar.</p>
+        <p>O envio automático de mensagens depende de serviços de terceiros (como WhatsApp) e pode falhar ou atrasar por motivos fora do nosso controle. Você é responsável pelo conteúdo das mensagens que configurar. As mensagens são enviadas pelo número de WhatsApp da própria academia, conectado por leitura de QR code. A academia é responsável por usar seu número conforme as regras do WhatsApp, e o envio automático em volume pode levar o WhatsApp a limitar ou bloquear o número, o que está fora do nosso controle.</p>
       </Secao>
 
       <Secao titulo="7. Disponibilidade">

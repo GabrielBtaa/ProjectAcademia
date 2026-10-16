@@ -1116,7 +1116,10 @@ app.put('/api/conta/academia', authenticateToken, async (req, res) => {
   }
 
   try {
-    const usuarioAntes = await prisma.user.findUnique({ where: { id: req.user.id }, select: { automacaoConfiguradaEm: true } });
+    const usuarioAntes = await prisma.user.findUnique({ where: { id: req.user.id }, select: { automacaoConfiguradaEm: true, whatsappInstancia: true } });
+    if (whatsappAutoEnviar === true && !usuarioAntes?.whatsappInstancia) {
+      return res.status(400).json({ error: 'Conecte o WhatsApp da sua academia (QR code) antes de ativar o envio automático.' });
+    }
     const ligandoAutomacaoAgora = (whatsappAutoEnviar === true || emailAutoEnviar === true) && !usuarioAntes?.automacaoConfiguradaEm;
 
     const updated = await prisma.user.update({
@@ -1337,6 +1340,10 @@ async function excluirContaCompleta(user) {
       // Se a assinatura já não existe no Stripe, segue; qualquer outro erro aborta (não apagar e seguir cobrando)
       if (e.code !== 'resource_missing') throw e;
     }
+  }
+  // Remove a instância de WhatsApp da academia no Evolution (best-effort)
+  if (user.whatsappInstancia && evolutionConfigurado()) {
+    await evolution('DELETE', `/instance/delete/${encodeURIComponent(user.whatsappInstancia)}`).catch(() => {});
   }
   // Apaga na ordem certa (alunos e seus pagamentos, depois planos, depois a conta)
   await prisma.$transaction([
@@ -1631,17 +1638,21 @@ app.post('/api/billing/webhook', async (req, res) => {
 });
 
 // ===== Automação de Notificações via WhatsApp (Evolution API) =====
-async function enviarWhatsApp(numero, texto) {
+// Envia pela instância (número de WhatsApp) da própria academia — nunca por um número compartilhado.
+async function enviarWhatsApp(numero, texto, instancia) {
   const url = process.env.EVOLUTION_API_URL;
   const apiKey = process.env.EVOLUTION_API_KEY;
-  const instancia = process.env.EVOLUTION_INSTANCE;
-  if (!url || !apiKey || !instancia) {
-    throw new Error('Evolution API não configurada (faltam variáveis de ambiente)');
+  if (!url || !apiKey) {
+    throw new Error('Serviço de WhatsApp indisponível no momento');
   }
-  const resp = await fetch(`${url.replace(/\/$/, '')}/message/sendText/${instancia}`, {
+  if (!instancia) {
+    throw new Error('WhatsApp não conectado. Conecte o número da academia em Configurações.');
+  }
+  const resp = await fetch(`${url.replace(/\/$/, '')}/message/sendText/${encodeURIComponent(instancia)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: apiKey },
     body: JSON.stringify({ number: numero, text: texto }),
+    signal: AbortSignal.timeout(20000),
   });
   if (!resp.ok) {
     const corpo = await resp.text().catch(() => '');
@@ -1649,6 +1660,95 @@ async function enviarWhatsApp(numero, texto) {
   }
   return resp.json().catch(() => ({}));
 }
+
+// ===== Conexão do WhatsApp de cada academia (Evolution API v2, uma instância por cliente) =====
+function evolutionConfigurado() {
+  return !!(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY);
+}
+async function evolution(metodo, caminho, corpo) {
+  const base = process.env.EVOLUTION_API_URL.replace(/\/$/, '');
+  const resp = await fetch(base + caminho, {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json', apikey: process.env.EVOLUTION_API_KEY },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+    signal: AbortSignal.timeout(20000),
+  });
+  const dados = await resp.json().catch(() => ({}));
+  return { ok: resp.ok, status: resp.status, dados };
+}
+const nomeInstanciaDe = (userId) => `gymflow-${userId}`;
+const estadoDe = (r) => r.dados?.instance?.state || r.dados?.state || 'desconhecido';
+
+const whatsappConectarLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas de conexão. Aguarde alguns minutos.' },
+});
+
+app.get('/api/whatsapp/status', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    if (!evolutionConfigurado()) return res.json({ disponivel: false, estado: 'indisponivel' });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user.whatsappInstancia) return res.json({ disponivel: true, estado: 'sem_instancia' });
+    const r = await evolution('GET', `/instance/connectionState/${encodeURIComponent(user.whatsappInstancia)}`);
+    if (r.status === 404) return res.json({ disponivel: true, estado: 'sem_instancia' });
+    if (!r.ok) throw new Error(`Evolution respondeu ${r.status}`);
+    res.json({ disponivel: true, estado: estadoDe(r) });
+  } catch (e) {
+    logErro('Erro ao consultar status do WhatsApp', e);
+    res.status(502).json({ error: 'Não foi possível consultar o WhatsApp agora. Tente novamente.' });
+  }
+});
+
+// Cria a instância da academia (na primeira vez) e devolve o QR code para ela escanear
+app.post('/api/whatsapp/conectar', authenticateToken, requireActiveSubscription, whatsappConectarLimiter, async (req, res) => {
+  try {
+    if (!evolutionConfigurado()) return res.status(503).json({ error: 'Envio por WhatsApp indisponível no momento' });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const nome = user.whatsappInstancia || nomeInstanciaDe(user.id);
+
+    if (!user.whatsappInstancia) {
+      const criada = await evolution('POST', '/instance/create', { instanceName: nome, qrcode: true, integration: 'WHATSAPP-BAILEYS' });
+      // 403/409: a instância já existe no Evolution (ex.: falha anterior depois de criar) — segue em frente
+      if (!criada.ok && criada.status !== 403 && criada.status !== 409) {
+        throw new Error(`Evolution não criou a instância (${criada.status})`);
+      }
+      await prisma.user.update({ where: { id: user.id }, data: { whatsappInstancia: nome } });
+    }
+
+    const estado = await evolution('GET', `/instance/connectionState/${encodeURIComponent(nome)}`);
+    if (estado.ok && estadoDe(estado) === 'open') return res.json({ estado: 'open' });
+
+    const qr = await evolution('GET', `/instance/connect/${encodeURIComponent(nome)}`);
+    if (!qr.ok) throw new Error(`Evolution não gerou o QR code (${qr.status})`);
+    const base64 = qr.dados?.base64 || qr.dados?.qrcode?.base64 || null;
+    res.json({
+      estado: 'connecting',
+      qrcode: base64 ? (base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`) : null,
+    });
+  } catch (e) {
+    logErro('Erro ao conectar WhatsApp', e);
+    res.status(502).json({ error: 'Não foi possível gerar o QR code agora. Tente novamente em instantes.' });
+  }
+});
+
+// Desconecta o número (mantém a instância) e desliga o envio automático
+app.post('/api/whatsapp/desconectar', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (user.whatsappInstancia && evolutionConfigurado()) {
+      // Se já estava desconectado o Evolution pode responder erro: o importante é o estado final
+      await evolution('DELETE', `/instance/logout/${encodeURIComponent(user.whatsappInstancia)}`).catch(() => {});
+    }
+    await prisma.user.update({ where: { id: user.id }, data: { whatsappAutoEnviar: false } });
+    res.json({ ok: true });
+  } catch (e) {
+    logErro('Erro ao desconectar WhatsApp', e);
+    res.status(500).json({ error: 'Erro ao desconectar o WhatsApp' });
+  }
+});
 
 // Envia e-mail via Resend (https://resend.com). Requer RESEND_API_KEY e RESEND_FROM_EMAIL
 // nas variáveis de ambiente. O "from" precisa ser de um domínio verificado na Resend
@@ -1768,7 +1868,7 @@ async function dispararNotificacoesParaUsuario(userId, origem = 'manual') {
 
     try {
       if (!enviarWhatsappHabilitado) throw new Error('Envio automático de WhatsApp desativado nas configurações');
-      await enviarWhatsApp(numero, texto);
+      await enviarWhatsApp(numero, texto, usuario?.whatsappInstancia);
       logsExecucao.push({ ...logBase, status: 'sucesso', mensagem: tipoMsg === '5dias' ? `Lembrete enviado (vence ${dataStr})` : `Cobrança enviada (venceu ${dataStr})` });
       if (tipoMsg === '5dias') contador5Dias++; else contadorVencidos++;
     } catch (erroEnvio) {
@@ -1938,7 +2038,7 @@ app.use((req, res) => {
 
 // Vercel serverless handler
 if (process.env.NODE_ENV === 'test') {
-  app.__internals = { parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
+  app.__internals = { enviarWhatsApp, parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
 }
 
 module.exports = app;

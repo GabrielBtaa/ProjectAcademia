@@ -46,6 +46,8 @@ model User {
   acessoLiberadoManual      Boolean  @default(false)
   bloqueadoPorAdmin         Boolean  @default(false)
   // Programa de indicação
+  // Instância do Evolution API (WhatsApp) própria de cada academia
+  whatsappInstancia           String?
   codigoIndicacao             String?  @unique
   indicadoPorUserId           Int?
   indicacaoRecompensada       Boolean  @default(false)

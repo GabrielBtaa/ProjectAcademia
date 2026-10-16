@@ -18,9 +18,10 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiFetch } from '../lib/api';
+import ConexaoWhatsapp from '../components/ConexaoWhatsapp';
 
 // Item de configuração genérico
 function SettingItem({ icon: Icon, title, description, children }) {
@@ -132,6 +133,7 @@ export default function Configuracoes() {
   const [academiaSalva, setAcademiaSalva] = useState(false);
   const [erroSalvarAcademia, setErroSalvarAcademia] = useState(null);
   const [mostrarWowAutomacao, setMostrarWowAutomacao] = useState(false);
+  const [whatsappConectado, setWhatsappConectado] = useState(false);
 
   // Carrega os dados da academia da conta logada (não é mais por navegador)
   useEffect(() => {
@@ -319,8 +321,18 @@ export default function Configuracoes() {
     handleSalvarAcademia({ emailAutoEnviar: novoValor });
   };
 
+  // Quando o WhatsApp é desconectado, o servidor já desligou o envio automático: reflete na tela
+  const handleEstadoWhatsapp = useCallback((conectado) => {
+    setWhatsappConectado(conectado);
+    if (!conectado) setDadosAcademia(prev => (prev.whatsappAutoEnviar ? { ...prev, whatsappAutoEnviar: false } : prev));
+  }, []);
+
   const handleToggleAutoEnviar = () => {
     const novoValor = !dadosAcademia.whatsappAutoEnviar;
+    if (novoValor && !whatsappConectado) {
+      window.alert('Conecte o WhatsApp da sua academia primeiro (botão "Conectar WhatsApp", na seção de mensagens).');
+      return;
+    }
     updateAcademia('whatsappAutoEnviar', novoValor);
     handleSalvarAcademia({ whatsappAutoEnviar: novoValor });
   };
@@ -507,6 +519,8 @@ export default function Configuracoes() {
               {salvandoAcademia ? 'Salvando...' : academiaSalva ? 'Salvo!' : 'Salvar Mensagens e PIX'}
             </button>
           </div>
+
+          <ConexaoWhatsapp onEstado={handleEstadoWhatsapp} />
 
           <div className="p-3 rounded-lg space-y-3" style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)' }}>
             <div className="flex items-center justify-between">
