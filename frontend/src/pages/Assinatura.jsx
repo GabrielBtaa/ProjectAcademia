@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { PLANOS as PLANOS_BASE, formatarPreco } from '../lib/conteudo';
 
-const PLANOS = [
-  { id: 'starter', nome: 'Starter', preco: 'R$150/mês', limite: 'Até 50 alunos' },
-  { id: 'pro', nome: 'Pro', preco: 'R$250/mês', limite: 'Até 100 alunos', destaque: true },
-  { id: 'business', nome: 'Business', preco: 'R$400/mês', limite: 'Até 250 alunos' },
-];
+// Planos, preços e limites vêm da fonte única (src/lib/conteudo.js)
+const PLANOS = PLANOS_BASE.map(p => ({ ...p, preco: `${formatarPreco(p.preco)}/mês`, limite: `Até ${p.limiteAlunos} alunos` }));
 
 export default function Assinatura({ bloqueadoPorAdmin = false }) {
   const { logout } = useAuth();
@@ -66,18 +64,18 @@ export default function Assinatura({ bloqueadoPorAdmin = false }) {
               className="rounded-2xl p-6 flex flex-col"
               style={{
                 background: '#11182c',
-                border: p.destaque ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                border: p.destaque ? '1px solid var(--accent-500)' : '1px solid rgba(255,255,255,0.08)',
               }}
             >
               <div className="font-bold text-white mb-1">{p.nome}</div>
               <div className="text-xs mb-4" style={{ color: '#8890a4' }}>{p.limite}</div>
-              <div className="text-2xl font-bold mb-6" style={{ color: '#3b82f6', fontFamily: 'monospace' }}>{p.preco}</div>
+              <div className="text-2xl font-bold mb-6" style={{ color: 'var(--accent-500)', fontFamily: 'monospace' }}>{p.preco}</div>
               <button
                 onClick={() => handleAssinar(p.id)}
                 disabled={carregando !== null}
                 className="mt-auto py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2"
                 style={{
-                  background: p.destaque ? '#3b82f6' : 'transparent',
+                  background: p.destaque ? 'var(--accent-500)' : 'transparent',
                   color: p.destaque ? '#fff' : 'white',
                   border: p.destaque ? 'none' : '1px solid rgba(255,255,255,0.15)',
                 }}

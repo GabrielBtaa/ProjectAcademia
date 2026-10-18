@@ -177,7 +177,7 @@ function PagamentoModal({ alunos, planos, onClose, onSave }) {
                   className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl text-xs font-semibold transition-all"
                   style={
                     form.metodo === value
-                      ? { background: 'rgba(37, 99, 235, 0.2)', color: '#60a5fa', border: '2px solid #2563eb' }
+                      ? { background: 'color-mix(in srgb, var(--accent) 20%, transparent)', color: 'var(--accent-400)', border: '2px solid var(--accent)' }
                       : { background: 'var(--surface-alt-2)', color: 'var(--text-muted)', border: '2px solid var(--border-1)' }
                   }
                 >
@@ -398,7 +398,7 @@ export default function Financeiro() {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <PackagePlus size={18} style={{ color: '#60a5fa' }} />
+            <PackagePlus size={18} style={{ color: 'var(--accent-400)' }} />
             <h4 className="font-semibold text-heading text-sm">Planos Disponíveis</h4>
           </div>
           <button
@@ -428,7 +428,7 @@ export default function Financeiro() {
                   <button
                     onClick={() => { setPlanoEditando(plano); setModalPlano(true); }}
                     className="p-1 rounded-lg"
-                    style={{ color: '#60a5fa', background: 'rgba(37, 99, 235, 0.1)' }}
+                    style={{ color: 'var(--accent-400)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)' }}
                   >
                     <Edit2 size={12} />
                   </button>

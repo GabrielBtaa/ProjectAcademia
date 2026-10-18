@@ -11,10 +11,10 @@
   --color-brand-800: #0d1528;
   --color-brand-700: #0f1f3d;
   --color-brand-600: #1a2f5a;
-  --color-brand-500: #1e3a72;
-  --color-brand-400: #2563eb;
-  --color-brand-300: #3b82f6;
-  --color-brand-200: #93c5fd;
+  --color-brand-500: var(--accent-800);
+  --color-brand-400: var(--accent);
+  --color-brand-300: var(--accent-500);
+  --color-brand-200: var(--accent-300);
   --color-brand-100: #dbeafe;
 
   --color-success-600: #059669;
@@ -190,8 +190,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
-  50% { box-shadow: 0 0 20px 4px rgba(37, 99, 235, 0.25); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  50% { box-shadow: 0 0 20px 4px color-mix(in srgb, var(--accent) 25%, transparent); }
 }
 
 @keyframes shimmer {
@@ -217,7 +217,7 @@ body {
 }
 
 .gradient-brand {
-  background: linear-gradient(135deg, #1e3a72 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--accent-800) 0%, var(--accent) 100%);
 }
 
 .gradient-success {
@@ -233,7 +233,7 @@ body {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  background: linear-gradient(135deg, var(--accent-500), var(--accent-400));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -245,13 +245,13 @@ body {
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(37, 99, 235, 0.15);
-  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 /* Botões com efeito de glow */
 .btn-primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, var(--accent), var(--accent-700));
   color: white;
   border: none;
   padding: 0.5rem 1.25rem;
@@ -265,8 +265,8 @@ body {
   gap: 0.5rem;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, var(--accent-500), var(--accent));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 40%, transparent);
   transform: translateY(-1px);
 }
 .btn-primary:active {
@@ -329,8 +329,8 @@ body {
   color: rgba(156, 163, 175, 0.6);
 }
 .input-field:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
   background: rgba(30, 41, 59, 0.9);
 }
 
@@ -390,3 +390,36 @@ body {
 }
 html { -webkit-text-size-adjust: 100%; }
 body { overflow-x: hidden; }
+
+/* ===== TEMAS DE COR (acento) ===== */
+:root {
+  --accent-300: #93c5fd; --accent-400: #60a5fa; --accent-500: #3b82f6; --accent: #2563eb;
+  --accent-700: #1d4ed8; --accent-800: #1e3a72; --accent-900: #1e3a8a; --accent-950: #172554; --accent-2: #7c3aed;
+}
+html[data-accent='red'] {
+  --accent-300: #fca5a5; --accent-400: #f87171; --accent-500: #ef4444; --accent: #dc2626;
+  --accent-700: #b91c1c; --accent-800: #991b1b; --accent-900: #7f1d1d; --accent-950: #450a0a; --accent-2: #f97316;
+}
+html[data-accent='green'] {
+  --accent-300: #86efac; --accent-400: #4ade80; --accent-500: #22c55e; --accent: #16a34a;
+  --accent-700: #15803d; --accent-800: #166534; --accent-900: #14532d; --accent-950: #052e16; --accent-2: #0d9488;
+}
+html[data-accent='violet'] {
+  --accent-300: #c4b5fd; --accent-400: #a78bfa; --accent-500: #8b5cf6; --accent: #7c3aed;
+  --accent-700: #6d28d9; --accent-800: #5b21b6; --accent-900: #4c1d95; --accent-950: #2e1065; --accent-2: #db2777;
+}
+html[data-accent='orange'] {
+  --accent-300: #fdba74; --accent-400: #fb923c; --accent-500: #f97316; --accent: #ea580c;
+  --accent-700: #c2410c; --accent-800: #9a3412; --accent-900: #7c2d12; --accent-950: #431407; --accent-2: #dc2626;
+}
+html[data-accent='pink'] {
+  --accent-300: #f9a8d4; --accent-400: #f472b6; --accent-500: #ec4899; --accent: #db2777;
+  --accent-700: #be185d; --accent-800: #9d174d; --accent-900: #831843; --accent-950: #500724; --accent-2: #7c3aed;
+}
+/* As classes blue-*/indigo-* do Tailwind seguem o acento escolhido (azul = padrão, sem override) */
+html[data-accent]:not([data-accent='blue']) {
+  --color-blue-300: var(--accent-300); --color-blue-400: var(--accent-400); --color-blue-500: var(--accent-500);
+  --color-blue-600: var(--accent); --color-blue-700: var(--accent-700); --color-blue-800: var(--accent-800); --color-blue-900: var(--accent-900);
+  --color-indigo-300: var(--accent-300); --color-indigo-400: var(--accent-400); --color-indigo-500: var(--accent-500);
+  --color-indigo-600: var(--accent); --color-indigo-700: var(--accent-700);
+}

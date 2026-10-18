@@ -47,7 +47,7 @@ export default function PlataformaMetricas({ embutido = false }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Cartao icon={DollarSign} titulo="MRR estimado" valor={`R$ ${dados.mrrEstimado.toLocaleString('pt-BR')}`} cor="#22c55e" />
-        <Cartao icon={Users} titulo="Assinantes ativos" valor={dados.assinantesAtivos} cor="#60a5fa" />
+        <Cartao icon={Users} titulo="Assinantes ativos" valor={dados.assinantesAtivos} cor="var(--accent-400)" />
         <Cartao icon={Sparkles} titulo="Em trial" valor={dados.emTrial} cor="#f59e0b" />
         <Cartao icon={UserMinus} titulo="Cancelados" valor={dados.cancelados} cor="#f87171" />
       </div>
@@ -70,7 +70,7 @@ export default function PlataformaMetricas({ embutido = false }) {
 
         <div className="rounded-xl p-4" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={16} style={{ color: '#60a5fa' }} />
+            <TrendingUp size={16} style={{ color: 'var(--accent-400)' }} />
             <p className="text-sm font-bold" style={{ color: 'var(--text-heading)' }}>Crescimento (último mês)</p>
           </div>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>

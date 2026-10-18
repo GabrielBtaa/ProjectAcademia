@@ -50,7 +50,7 @@ function Faturas({ userId }) {
             {f.valor.toLocaleString('pt-BR', { style: 'currency', currency: f.moeda === 'BRL' ? 'BRL' : f.moeda })}
           </span>
           <span style={{ color: f.status === 'paid' ? '#22c55e' : '#f59e0b' }}>{f.status === 'paid' ? 'pago' : f.status}</span>
-          {f.url && <a href={f.url} target="_blank" rel="noreferrer" aria-label="Abrir fatura" style={{ color: '#60a5fa' }}><ExternalLink size={12} /></a>}
+          {f.url && <a href={f.url} target="_blank" rel="noreferrer" aria-label="Abrir fatura" style={{ color: 'var(--accent-400)' }}><ExternalLink size={12} /></a>}
         </div>
       ))}
     </div>
@@ -115,7 +115,7 @@ function CartaoUsuario({ u, onAcao, onExcluir, ocupado }) {
         </div>
       )}
 
-      <button onClick={() => setAberto(a => !a)} className="flex items-center gap-1 text-xs font-medium" style={{ color: '#60a5fa' }}>
+      <button onClick={() => setAberto(a => !a)} className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--accent-400)' }}>
         {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Pagamentos e detalhes
       </button>
       {aberto && (
@@ -237,7 +237,7 @@ export default function PlataformaAdmin() {
             key={a.id}
             onClick={() => setAba(a.id)}
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-            style={aba === a.id ? { background: '#2563eb', color: '#fff' } : { color: 'var(--text-secondary)' }}
+            style={aba === a.id ? { background: 'var(--accent)', color: '#fff' } : { color: 'var(--text-secondary)' }}
           >
             {a.label}
           </button>

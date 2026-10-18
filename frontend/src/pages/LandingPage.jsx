@@ -4,7 +4,7 @@ import {
   Users,
   DollarSign,
   Activity,
-  Bell,
+  MessageCircle,
   CheckCircle2,
   Sparkles,
   ArrowRight,
@@ -13,11 +13,11 @@ import {
   TrendingUp,
   BarChart3,
   ChevronRight,
-  Star,
   Sun,
   Moon,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { PLANOS, RECURSOS_TEXTO, FAQS, PASSOS, formatarPreco } from '../lib/conteudo';
 
 export default function LandingPage({ onOpenLogin, onOpenRegister }) {
   const [activeFaq, setActiveFaq] = useState(null);
@@ -28,76 +28,13 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
     setActiveFaq(activeFaq === index ? null : index);
   };
 
-  const RECURSOS = [
-    {
-      icon: Users,
-      title: 'Gestão Completa de Alunos',
-      description: 'Controle matriculados, mensalidades em dia, vencimentos e cadastros em uma interface rápida e intuitiva.',
-      color: '#3b82f6',
-      bg: 'rgba(59, 130, 246, 0.1)',
-    },
-    {
-      icon: DollarSign,
-      title: 'Controle Financeiro Automático',
-      description: 'Registre pagamentos com 1 clique. O sistema estende os vencimentos e calcula o faturamento mensal automaticamente.',
-      color: '#34d399',
-      bg: 'rgba(52, 211, 153, 0.1)',
-    },
-    {
-      icon: BarChart3,
-      title: 'Gráficos e Métricas em Tempo Real',
-      description: 'Visualização nítida de faturamento, alunos ativos vs. inadimplentes e distribuição de matriculados por plano.',
-      color: '#a78bfa',
-      bg: 'rgba(167, 139, 250, 0.1)',
-    },
-    {
-      icon: Bell,
-      title: 'Lembretes Inteligentes de Vencimento',
-      description: 'Saiba exatamente quem vence hoje ou nos próximos 5 dias. As notificações limpam na hora assim que o pagamento cai.',
-      color: '#f59e0b',
-      bg: 'rgba(245, 158, 11, 0.1)',
-    },
+  const ESTILO_RECURSOS = [
+    { icon: Users, color: 'var(--accent-500)', bg: 'color-mix(in srgb, var(--accent-500) 10%, transparent)' },
+    { icon: DollarSign, color: '#34d399', bg: 'rgba(52, 211, 153, 0.1)' },
+    { icon: BarChart3, color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.1)' },
+    { icon: MessageCircle, color: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)' },
   ];
-
-  const DEPOIMENTOS = [
-    {
-      nome: 'Marcelo Oliveira',
-      cargo: 'Proprietário da Academia IronFit',
-      texto: 'O GymFlow organizou todo o nosso financeiro em menos de uma semana. Zeramos a inadimplência com os avisos de vencimento.',
-      estrelas: 5,
-    },
-    {
-      nome: 'Renata Castro',
-      cargo: 'Gestora do Box CrossFit Alpha',
-      texto: 'O teste de 30 dias sem cartão facilitou muito. Conseguimos cadastrar nossos alunos e ver os gráficos funcionando na prática.',
-      estrelas: 5,
-    },
-    {
-      nome: 'Carlos Eduardo',
-      cargo: 'Head Coach do Estúdio Personal VIP',
-      texto: 'Visual muito limpo, simples de usar no celular ou computador. Excelente suporte e relatórios super precisos!',
-      estrelas: 5,
-    },
-  ];
-
-  const FAQS = [
-    {
-      pergunta: 'Como funciona o teste grátis de 30 dias?',
-      resposta: 'Ao se cadastrar, sua conta ganha 30 dias de acesso total e ilimitado a todas as ferramentas do GymFlow. Não exigimos cartão de crédito no momento do registro.',
-    },
-    {
-      pergunta: 'Preciso instalar algum programa no computador?',
-      resposta: 'Não! O GymFlow é 100% online (SaaS). Você e sua equipe podem acessar de qualquer computador, tablet ou celular com internet.',
-    },
-    {
-      pergunta: 'Posso cadastrar quantos alunos quiser no período de testes?',
-      resposta: 'Sim! Durante os 30 dias grátis, o cadastro de alunos, planos e movimentações financeiras é totalmente ilimitado.',
-    },
-    {
-      pergunta: 'O que acontece após o término dos 30 dias?',
-      resposta: 'Após 30 dias, você poderá escolher um de nossos planos acessíveis para continuar usando. Todos os seus dados cadastrados continuam 100% salvos e seguros.',
-    },
-  ];
+  const RECURSOS = RECURSOS_TEXTO.map((t, i) => ({ ...t, ...ESTILO_RECURSOS[i] }));
 
   return (
     <div className="min-h-screen font-sans" style={{ background: 'var(--bg-page)', color: 'var(--text-heading)' }}>
@@ -108,7 +45,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
           
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}>
               <Dumbbell size={20} color="white" />
             </div>
             <div>
@@ -143,7 +80,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <button
               onClick={onOpenRegister}
               className="px-4 py-2.5 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}
             >
               <Sparkles size={15} className="text-amber-300" />
               <span className="sm:hidden">Testar grátis</span><span className="hidden sm:inline">Testar 30 Dias Grátis</span>
@@ -151,6 +88,8 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
           </div>
         </div>
       </header>
+
+      <main>
 
       {/* ===== Hero Section ===== */}
       <section className="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
@@ -160,7 +99,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           
           {/* Badge de Oferta */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-8 animate-fade-in-up" style={{ background: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#60a5fa' }}>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-8 animate-fade-in-up" style={{ background: 'color-mix(in srgb, var(--accent) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)', color: 'var(--accent-400)' }}>
             <Sparkles size={14} className="text-amber-400" />
             <span>Padrão EVO & W12 · Teste 30 Dias sem Cartão de Crédito</span>
           </div>
@@ -180,7 +119,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <button
               onClick={onOpenRegister}
               className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-base text-white shadow-xl flex items-center justify-center gap-3 transition-all hover:scale-105"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}
             >
               <span>Começar Meus 30 Dias Grátis</span>
               <ArrowRight size={18} />
@@ -202,7 +141,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
           </div>
 
           {/* Showcase / Preview do Dashboard */}
-          <div className="mt-16 relative max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2" style={{ background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.3) 0%, rgba(13, 21, 40, 0.8) 100%)', border: '1px solid rgba(55, 65, 81, 0.5)' }}>
+          <div className="mt-16 relative max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2" style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 30%, transparent) 0%, rgba(13, 21, 40, 0.8) 100%)', border: '1px solid rgba(55, 65, 81, 0.5)' }}>
             <div className="rounded-xl overflow-hidden p-6 sm:p-8 text-left space-y-6" style={{ background: '#0d1528' }}>
               
               {/* Barra superior simulada do app */}
@@ -282,51 +221,69 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
         </div>
       </section>
 
-      {/* ===== Prova Social / Depoimentos ===== */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+      {/* ===== Como começar ===== */}
+      <section className="py-20" aria-labelledby="como-comecar">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>
-              Aprovado por Gestores de Fitness de todo o Brasil
+            <h2 id="como-comecar" className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>
+              Comece a usar em 3 passos
             </h2>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Veja quem já simplificou a gestão e reduziu a inadimplência com o GymFlow.
+              Em poucos minutos sua academia já está com alunos cadastrados e a cobrança funcionando sozinha.
             </p>
           </div>
+          <ol className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {PASSOS.map((passo, i) => (
+              <li key={passo.titulo} className="rounded-2xl p-6" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
+                <span className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white mb-4" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}>{i + 1}</span>
+                <h3 className="text-base font-bold mb-2" style={{ color: 'var(--text-heading)' }}>{passo.titulo}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{passo.texto}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-          <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {DEPOIMENTOS.map((dep, i) => (
-              <div
-                key={i}
-                className="rounded-2xl p-6 flex flex-col justify-between space-y-4"
-                style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}
-              >
-                <div className="space-y-3">
-                  <div className="flex gap-1">
-                    {[...Array(dep.estrelas)].map((_, s) => (
-                      <Star key={s} size={16} className="text-amber-400 fill-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm italic leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                    "{dep.texto}"
-                  </p>
-                </div>
-                <div className="pt-3" style={{ borderTop: '1px solid var(--border-2)' }}>
-                  <p className="font-bold text-sm" style={{ color: 'var(--text-heading)' }}>{dep.nome}</p>
-                  <p className="text-xs text-blue-400">{dep.cargo}</p>
-                </div>
+      {/* ===== Planos e preços ===== */}
+      <section id="planos" className="py-20" style={{ background: 'var(--surface-alt-1)', borderTop: '1px solid var(--border-2)', borderBottom: '1px solid var(--border-2)' }} aria-labelledby="planos-titulo">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <h2 id="planos-titulo" className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>
+              Planos simples, sem surpresa
+            </h2>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Todos os recursos em todos os planos. O que muda é só o número de alunos. 30 dias grátis, sem cartão de crédito.
+            </p>
+          </div>
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {PLANOS.map(plano => (
+              <div key={plano.id} className="rounded-2xl p-6 flex flex-col"
+                style={{ background: 'var(--surface-card)', border: plano.destaque ? '2px solid var(--accent)' : '1px solid var(--border-2)' }}>
+                {plano.destaque && <span className="text-[0.65rem] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-400)' }}>Mais escolhido</span>}
+                <h3 className="text-lg font-bold" style={{ color: 'var(--text-heading)' }}>{plano.nome}</h3>
+                <p className="mt-2 text-3xl font-extrabold" style={{ color: 'var(--text-heading)' }}>
+                  {formatarPreco(plano.preco)}<span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>/mês</span>
+                </p>
+                <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--accent-400)' }}>Até {plano.limiteAlunos} alunos</p>
+                <ul className="mt-4 space-y-2 text-xs flex-1" style={{ color: 'var(--text-secondary)' }}>
+                  {['Gestão de alunos, planos e financeiro', 'Cobrança automática por WhatsApp e e-mail', 'Painel com gráficos e métricas', 'Importação de alunos por planilha'].map(item => (
+                    <li key={item} className="flex items-start gap-2"><CheckCircle2 size={14} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-400)' }} />{item}</li>
+                  ))}
+                </ul>
+                <button onClick={onOpenRegister} className="mt-6 w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}>
+                  Testar 30 dias grátis
+                </button>
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
       {/* ===== Chamada CTA Final ===== */}
       <section className="py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl p-8 sm:p-12 text-center space-y-6 relative overflow-hidden shadow-2xl" style={{ background: 'linear-gradient(135deg, #1e3a72 0%, #2563eb 100%)' }}>
+          <div className="rounded-3xl p-8 sm:p-12 text-center space-y-6 relative overflow-hidden shadow-2xl" style={{ background: 'linear-gradient(135deg, var(--accent-800) 0%, var(--accent) 100%)' }}>
             
             <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
               Pronto para transformar a gestão da sua academia?
@@ -385,6 +342,8 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
         </div>
       </section>
 
+      </main>
+
       {/* ===== Rodapé ===== */}
       <footer className="py-8 text-center text-xs" style={{ borderTop: '1px solid var(--border-2)', color: 'var(--text-muted)' }}>
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -398,7 +357,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <span>•</span>
             <a href="/termos" className="hover:text-blue-400 transition-colors">Termos</a>
             <span>•</span>
-            <span>Versão 1.2.0</span>
+            <span>Versão 1.3.0</span>
           </div>
         </div>
       </footer>

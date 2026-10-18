@@ -10,6 +10,20 @@ export function useTheme() {
   return context;
 }
 
+export const ACENTOS = [
+  { id: 'blue', nome: 'Azul', cor: '#2563eb' },
+  { id: 'red', nome: 'Vermelho', cor: '#dc2626' },
+  { id: 'green', nome: 'Verde', cor: '#16a34a' },
+  { id: 'violet', nome: 'Roxo', cor: '#7c3aed' },
+  { id: 'orange', nome: 'Laranja', cor: '#ea580c' },
+  { id: 'pink', nome: 'Rosa', cor: '#db2777' },
+];
+
+function getAcentoInicial() {
+  const salvo = localStorage.getItem('gymflow_accent');
+  return ACENTOS.some(a => a.id === salvo) ? salvo : 'blue';
+}
+
 function getTemaInicial() {
   const salvo = localStorage.getItem('theme');
   if (salvo === 'light' || salvo === 'dark') return salvo;
@@ -20,6 +34,12 @@ function getTemaInicial() {
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(getTemaInicial);
+  const [accent, setAccent] = useState(getAcentoInicial);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-accent', accent);
+    localStorage.setItem('gymflow_accent', accent);
+  }, [accent]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -40,7 +60,7 @@ export function ThemeProvider({ children }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, accent, setAccent }}>
       {children}
     </ThemeContext.Provider>
   );

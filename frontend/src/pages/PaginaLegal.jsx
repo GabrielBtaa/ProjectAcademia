@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ArrowLeft, Dumbbell } from 'lucide-react';
 
 // >>> EDITE AQUI com os dados reais da sua empresa/contato antes de divulgar <<<
@@ -153,6 +154,22 @@ function Termos() {
 }
 
 export default function PaginaLegal({ tipo }) {
+  // Título e descrição próprios para cada página (ajuda buscadores e quem compartilha o link)
+  useEffect(() => {
+    const termos = tipo === 'termos';
+    const tituloAnterior = document.title;
+    const meta = document.querySelector('meta[name="description"]');
+    const descricaoAnterior = meta?.getAttribute('content');
+    document.title = termos ? `Termos de Uso | ${NOME_EMPRESA}` : `Política de Privacidade | ${NOME_EMPRESA}`;
+    meta?.setAttribute('content', termos
+      ? `Termos de Uso do ${NOME_EMPRESA}: regras de uso, planos, cobrança, cancelamento e responsabilidades.`
+      : `Política de Privacidade do ${NOME_EMPRESA}: quais dados coletamos, para que usamos e como exercer seus direitos pela LGPD.`);
+    return () => {
+      document.title = tituloAnterior;
+      if (meta && descricaoAnterior) meta.setAttribute('content', descricaoAnterior);
+    };
+  }, [tipo]);
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
       <header className="sticky top-0 z-10 backdrop-blur-xl" style={{ background: 'var(--surface-modal)', borderBottom: '1px solid var(--border-2)' }}>
@@ -161,7 +178,7 @@ export default function PaginaLegal({ tipo }) {
             <ArrowLeft size={16} /> Voltar
           </a>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}>
               <Dumbbell size={16} color="white" />
             </div>
             <span className="font-bold" style={{ color: 'var(--text-heading)' }}>{NOME_EMPRESA}</span>

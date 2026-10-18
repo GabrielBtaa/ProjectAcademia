@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Menu, Search, LogOut, User, AlertTriangle, Clock, CreditCard, Sun, Moon, UserCog, Headset } from 'lucide-react';
+import { Bell, Menu, Search, LogOut, User, AlertTriangle, Clock, CreditCard, Sun, Moon, UserCog, Headset, Lock, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useViewMode } from '../contexts/ViewModeContext';
@@ -8,7 +8,7 @@ import { apiFetch } from '../lib/api';
 const ICONE_TIPO = {
   vencido: { icon: AlertTriangle, color: '#f87171' },
   vencendo: { icon: Clock, color: '#fbbf24' },
-  pendente: { icon: CreditCard, color: '#60a5fa' },
+  pendente: { icon: CreditCard, color: 'var(--accent-400)' },
 };
 
 /**
@@ -24,7 +24,35 @@ const ICONE_TIPO = {
 export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { viewMode, toggleViewMode } = useViewMode();
+  const { viewMode, entrarModoRecepcionista, voltarModoAdmin } = useViewMode();
+  const [pedindoSenha, setPedindoSenha] = useState(false);
+  const [senhaModo, setSenhaModo] = useState('');
+  const [erroModo, setErroModo] = useState(null);
+  const [trocandoModo, setTrocandoModo] = useState(false);
+
+  // Admin -> recepcionista é livre; recepcionista -> admin exige a senha do modo administrador
+  const handleBotaoModo = async () => {
+    if (viewMode === 'admin') {
+      try { await entrarModoRecepcionista(); } catch (e) { window.alert(e.message); }
+    } else {
+      setSenhaModo('');
+      setErroModo(null);
+      setPedindoSenha(true);
+    }
+  };
+  const handleConfirmarSenhaModo = async (e) => {
+    e.preventDefault();
+    setTrocandoModo(true);
+    setErroModo(null);
+    try {
+      await voltarModoAdmin(senhaModo);
+      setPedindoSenha(false);
+    } catch (err) {
+      setErroModo(err.message);
+    } finally {
+      setTrocandoModo(false);
+    }
+  };
   const isLight = theme === 'light';
   const [notificacoes, setNotificacoes] = useState([]);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -107,6 +135,7 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
   const btnColor = isLight ? '#475569' : '#9ca3af';
 
   return (
+    <>
     <header
       className="flex items-center justify-between px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 lg:top-4 lg:mx-4 lg:mb-0 z-30 lg:rounded-2xl lg:shadow-sm transition-colors duration-300"
       style={{
@@ -161,14 +190,14 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
           />
         </form>
 
-        {/* Alternância Admin / Recepcionista (mesma conta, restringe a UI) */}
+        {/* Alternância Admin / Recepcionista (o servidor impõe as restrições; voltar a admin pede senha) */}
         <button
-          onClick={toggleViewMode}
+          onClick={handleBotaoModo}
           className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200"
           style={{ color: 'var(--icon-btn-color)', background: 'var(--icon-btn-bg)' }}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--icon-btn-hover-bg)'}
           onMouseLeave={e => e.currentTarget.style.background = 'var(--icon-btn-bg)'}
-          title="Alternar entre modo Admin e Recepcionista"
+          title={viewMode === 'admin' ? 'Mudar para o modo Recepcionista' : 'Voltar ao modo Administrador (pede senha)'}
         >
           {viewMode === 'admin' ? <UserCog size={15} /> : <Headset size={15} />}
           {viewMode === 'admin' ? 'Admin' : 'Recepcionista'}
@@ -179,7 +208,7 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
           onClick={toggleTheme}
           className="p-2 rounded-lg transition-all duration-200"
           style={{ color: btnColor, background: btnBg }}
-          onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#1d4ed8' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = isLight ? 'var(--accent-700)' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = btnColor; e.currentTarget.style.background = btnBg; }}
           aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
           title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
@@ -193,7 +222,7 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
             onClick={handleTogglePainel}
             className="relative p-2 rounded-lg transition-all duration-200"
           style={{ color: btnColor, background: btnBg }}
-          onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#1d4ed8' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = isLight ? 'var(--accent-700)' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = btnColor; e.currentTarget.style.background = btnBg; }}
             aria-label="Notificações"
           >
@@ -294,5 +323,42 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
         </div>
       </div>
     </header>
+
+    {pedindoSenha && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}>
+        <form onSubmit={handleConfirmarSenhaModo} className="w-full max-w-sm rounded-2xl p-6 space-y-4" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-2)' }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}>
+                <Lock size={18} color="#fff" />
+              </div>
+              <div>
+                <p className="font-bold text-sm" style={{ color: 'var(--text-heading)' }}>Voltar ao modo Administrador</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Digite a senha do modo administrador</p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setPedindoSenha(false)} aria-label="Fechar" style={{ color: 'var(--text-muted)' }}><X size={18} /></button>
+          </div>
+          <input
+            type="password"
+            autoFocus
+            value={senhaModo}
+            onChange={e => setSenhaModo(e.target.value)}
+            placeholder="Senha"
+            autoComplete="off"
+            className="w-full rounded-lg px-3 py-2.5 text-sm"
+            style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }}
+          />
+          {erroModo && <p className="text-xs" style={{ color: '#f87171' }}>{erroModo}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setPedindoSenha(false)} className="btn-secondary flex-1">Cancelar</button>
+            <button type="submit" disabled={!senhaModo || trocandoModo} className="btn-primary flex-1 justify-center disabled:opacity-50">
+              {trocandoModo ? 'Verificando...' : 'Entrar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    )}
+    </>
   );
 }

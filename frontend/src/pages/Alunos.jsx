@@ -371,7 +371,7 @@ const AlunoCard = memo(function AlunoCard({ aluno, onEdit, onDelete, podeExcluir
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #1e3a72, #2563eb)' }}
+            style={{ background: 'linear-gradient(135deg, var(--accent-800), var(--accent))' }}
           >
             {aluno.avatar}
           </div>
@@ -397,13 +397,13 @@ const AlunoCard = memo(function AlunoCard({ aluno, onEdit, onDelete, podeExcluir
       <div className="flex items-center justify-between">
         <div>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Plano: </span>
-          <span className="text-xs font-medium" style={{ color: '#60a5fa' }}>{aluno.plano}</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--accent-400)' }}>{aluno.plano}</span>
           <span className="text-xs ml-2" style={{ color: dias < 5 ? '#f87171' : 'var(--text-muted)' }}>
             {dias > 0 ? `(vence em ${dias}d)` : `(vencido há ${Math.abs(dias)}d)`}
           </span>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => onEdit(aluno)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#60a5fa' }} aria-label={`Editar ${aluno.nome}`} title="Editar">
+          <button onClick={() => onEdit(aluno)} className="p-1.5 rounded-lg transition-colors" style={{ color: 'var(--accent-400)' }} aria-label={`Editar ${aluno.nome}`} title="Editar">
             <Edit2 size={14} />
           </button>
           {podeExcluir && (
@@ -702,7 +702,7 @@ export default function Alunos({ searchTerm = '' }) {
       {limiteAtingido && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
           <div className="w-full max-w-sm rounded-2xl p-6 text-center space-y-4" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-2)' }}>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}>
               <AlertCircle size={22} color="#fff" />
             </div>
             <div>
@@ -753,7 +753,7 @@ export default function Alunos({ searchTerm = '' }) {
               className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
               style={
                 filtroStatus === opt.value
-                  ? { background: '#2563eb', color: 'white' }
+                  ? { background: 'var(--accent)', color: 'white' }
                   : { color: 'var(--text-muted)' }
               }
             >
@@ -803,7 +803,7 @@ export default function Alunos({ searchTerm = '' }) {
                       <div className="flex items-center gap-3">
                         <div
                           className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                          style={{ background: 'linear-gradient(135deg, #1e3a72, #2563eb)' }}
+                          style={{ background: 'linear-gradient(135deg, var(--accent-800), var(--accent))' }}
                         >
                           {aluno.avatar}
                         </div>
@@ -824,7 +824,7 @@ export default function Alunos({ searchTerm = '' }) {
 
                     {/* Plano */}
                     <td className="px-5 py-3.5">
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'rgba(37, 99, 235, 0.15)', color: '#60a5fa', border: '1px solid rgba(37, 99, 235, 0.25)' }}>
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent) 15%, transparent)', color: 'var(--accent-400)', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)' }}>
                         {aluno.plano}
                       </span>
                     </td>
@@ -864,7 +864,7 @@ export default function Alunos({ searchTerm = '' }) {
                         <button
                           onClick={() => handleEditar(aluno)}
                           className="p-1.5 rounded-lg transition-all"
-                          style={{ color: '#60a5fa', background: 'rgba(37, 99, 235, 0.1)' }}
+                          style={{ color: 'var(--accent-400)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)' }}
                           title="Editar"
                           aria-label={`Editar ${aluno.nome}`}
                         >
@@ -928,7 +928,7 @@ export default function Alunos({ searchTerm = '' }) {
                 className="w-8 h-8 rounded-lg text-xs font-semibold transition-all"
                 style={
                   p === paginaAtual
-                    ? { background: '#2563eb', color: 'white' }
+                    ? { background: 'var(--accent)', color: 'white' }
                     : { background: 'var(--surface-alt-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }
                 }
               >

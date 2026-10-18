@@ -47,6 +47,7 @@ export function AuthProvider({ children }) {
 
       // Salvar token no localStorage
       localStorage.setItem('token', data.token);
+      window.dispatchEvent(new Event('gymflow:token-changed'));
       setUser(data.user);
 
       return { success: true };
@@ -65,6 +66,7 @@ export function AuthProvider({ children }) {
       }
     } catch { /* sem rede: segue o logout local */ }
     localStorage.removeItem('token');
+    window.dispatchEvent(new Event('gymflow:token-changed'));
     setUser(null);
     window.location.reload();
   };

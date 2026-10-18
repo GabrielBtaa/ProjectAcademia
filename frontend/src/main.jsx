@@ -25,7 +25,7 @@ function TelaDeErro() {
         </p>
         <button
           onClick={() => window.location.reload()}
-          style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 10, padding: '12px 22px', fontWeight: 700, cursor: 'pointer' }}
+          style={{ background: 'var(--accent)', color: '#fff', border: 0, borderRadius: 10, padding: '12px 22px', fontWeight: 700, cursor: 'pointer' }}
         >
           Recarregar
         </button>

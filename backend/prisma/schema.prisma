@@ -47,6 +47,10 @@ model User {
   bloqueadoPorAdmin         Boolean  @default(false)
   // Programa de indicação
   // Instância do Evolution API (WhatsApp) própria de cada academia
+  // Senha (PIN) para sair do modo recepcionista e voltar a administrador
+  pinAdminHash                String?
+  pinFalhas                   Int      @default(0)
+  pinBloqueadoAte             DateTime?
   whatsappInstancia           String?
   // Para de cobrar aluno inadimplente depois de N dias de atraso (ele provavelmente não volta)
   whatsappDiasMaxAtraso       Int      @default(5)

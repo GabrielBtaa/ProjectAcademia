@@ -139,7 +139,7 @@ const chamar = (metodo, caminho, { token, corpo } = {}) =>
   fetch(base + caminho, {
     method: metodo,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: corpo ? JSON.stringify(corpo) : undefined,
+    body: corpo && metodo !== 'GET' ? JSON.stringify(corpo) : undefined,
   });
 
 // ---------- health ----------
@@ -522,6 +522,149 @@ test('cobrança: configuração valida o limite (1 a 90) e salva', async () => {
   assert.equal(r.status, 200);
   assert.equal((await r.json()).whatsappDiasMaxAtraso, 7);
   assert.equal(db.users.find(x => x.id === u.id).whatsappDiasMaxAtraso, 7);
+});
+
+
+// ---------- MODO ADMINISTRADOR x RECEPCIONISTA (imposto no servidor) ----------
+const claims = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+
+test('modo: entrar como recepcionista gera token novo e revoga o de administrador', async () => {
+  const u = await criarUsuario();
+  const admin = tokenDe(u);
+  const r = await chamar('POST', '/api/modo/recepcionista', { token: admin });
+  assert.equal(r.status, 200);
+  const dados = await r.json();
+  assert.equal(claims(dados.token).modo, 'recepcionista');
+  assert.equal((await chamar('GET', '/api/alunos', { token: admin })).status, 401, 'token antigo precisa estar revogado');
+  assert.equal((await chamar('GET', '/api/alunos', { token: dados.token })).status, 200);
+});
+
+test('modo: recepcionista é barrado nas ações restritas, mas usa o dia a dia', async () => {
+  const u = await criarUsuario({ subscriptionStatus: 'active' });
+  const rec = (await (await chamar('POST', '/api/modo/recepcionista', { token: tokenDe(u) })).json()).token;
+  const barradas = [
+    ['DELETE', '/api/alunos/1'], ['DELETE', '/api/planos/1'], ['DELETE', '/api/pagamentos/1'],
+    ['PUT', '/api/conta/academia'], ['GET', '/api/conta/exportar'], ['DELETE', '/api/conta'],
+    ['POST', '/api/billing/cancelar'], ['POST', '/api/billing/checkout'], ['POST', '/api/whatsapp/conectar'],
+    ['POST', '/api/whatsapp/desconectar'], ['PUT', '/api/auth/senha'], ['PUT', '/api/conta/pin-admin'],
+  ];
+  for (const [metodo, caminho] of barradas) {
+    const r = await chamar(metodo, caminho, { token: rec, corpo: {} });
+    assert.equal(r.status, 403, `${metodo} ${caminho} deveria ser barrado`);
+    assert.equal((await r.json()).code, 'ADMIN_MODE_REQUIRED');
+  }
+  assert.equal((await chamar('GET', '/api/alunos', { token: rec })).status, 200);
+  assert.equal((await chamar('GET', '/api/conta/academia', { token: rec })).status, 200);
+});
+
+test('modo: recepcionista não consegue virar administrador sem a senha', async () => {
+  const u = await criarUsuario();
+  const rec = (await (await chamar('POST', '/api/modo/recepcionista', { token: tokenDe(u) })).json()).token;
+  assert.equal((await chamar('POST', '/api/modo/admin', { token: rec, corpo: {} })).status, 400);
+  assert.equal((await chamar('POST', '/api/modo/admin', { token: rec, corpo: { pin: 'errada' } })).status, 401);
+});
+
+test('modo: sem PIN criado, a senha da conta volta ao modo administrador', async () => {
+  const u = await criarUsuario();
+  const rec = (await (await chamar('POST', '/api/modo/recepcionista', { token: tokenDe(u) })).json()).token;
+  const r = await chamar('POST', '/api/modo/admin', { token: rec, corpo: { pin: SENHA } });
+  assert.equal(r.status, 200);
+  const novo = (await r.json()).token;
+  assert.equal(claims(novo).modo, undefined);
+  assert.equal((await chamar('GET', '/api/alunos', { token: rec })).status, 401, 'token de recepcionista fica revogado');
+  assert.equal((await chamar('PUT', '/api/conta/academia', { token: novo, corpo: {} })).status, 200);
+});
+
+test('modo: com PIN criado, só o PIN volta ao modo administrador (a senha da conta não vale)', async () => {
+  const u = await criarUsuario();
+  const tk = tokenDe(u);
+  const criar = await chamar('PUT', '/api/conta/pin-admin', { token: tk, corpo: { senha: SENHA, pin: '4321' } });
+  assert.equal(criar.status, 200);
+  assert.ok(db.users.find(x => x.id === u.id).pinAdminHash, 'guarda só o hash');
+  assert.notEqual(db.users.find(x => x.id === u.id).pinAdminHash, '4321');
+
+  const rec = (await (await chamar('POST', '/api/modo/recepcionista', { token: tk })).json()).token;
+  assert.equal((await chamar('POST', '/api/modo/admin', { token: rec, corpo: { pin: SENHA } })).status, 401);
+  assert.equal((await chamar('POST', '/api/modo/admin', { token: rec, corpo: { pin: '4321' } })).status, 200);
+});
+
+test('modo: 5 PINs errados bloqueiam as tentativas por um tempo', async () => {
+  const u = await criarUsuario();
+  const rec = (await (await chamar('POST', '/api/modo/recepcionista', { token: tokenDe(u) })).json()).token;
+  for (let i = 0; i < 5; i++) {
+    assert.equal((await chamar('POST', '/api/modo/admin', { token: rec, corpo: { pin: 'x' + i } })).status, 401);
+  }
+  assert.equal((await chamar('POST', '/api/modo/admin', { token: rec, corpo: { pin: SENHA } })).status, 429);
+});
+
+test('modo: criar PIN exige a senha da conta e formato de 4 a 8 números', async () => {
+  const u = await criarUsuario();
+  const tk = tokenDe(u);
+  assert.equal((await chamar('PUT', '/api/conta/pin-admin', { token: tk, corpo: { senha: 'errada', pin: '1234' } })).status, 401);
+  assert.equal((await chamar('PUT', '/api/conta/pin-admin', { token: tk, corpo: { senha: SENHA, pin: '12' } })).status, 400);
+  assert.equal((await chamar('PUT', '/api/conta/pin-admin', { token: tk, corpo: { senha: SENHA, pin: 'abcd' } })).status, 400);
+  assert.equal((await chamar('PUT', '/api/conta/pin-admin', { token: tk, corpo: { senha: SENHA, pin: '123456789' } })).status, 400);
+  const ok = await (await chamar('PUT', '/api/conta/pin-admin', { token: tk, corpo: { senha: SENHA, pin: null } })).json();
+  assert.equal(ok.temPinAdmin, false);
+});
+
+test('sessão: /verify e troca de senha recusam token revogado (pós-logout)', async () => {
+  const u = await criarUsuario();
+  const tk = tokenDe(u);
+  assert.equal((await chamar('GET', '/api/auth/verify', { token: tk })).status, 200);
+  await chamar('POST', '/api/auth/logout', { token: tk });
+  assert.equal((await chamar('GET', '/api/auth/verify', { token: tk })).status, 401);
+  const r = await chamar('PUT', '/api/auth/senha', { token: tk, corpo: { senhaAtual: SENHA, novaSenha: 'nova12345' } });
+  assert.equal(r.status, 401);
+  assert.ok(bcrypt.compareSync(SENHA, db.users.find(x => x.id === u.id).password), 'senha não pode ter mudado');
+});
+
+test('sessão: troca de senha funciona em modo administrador', async () => {
+  const u = await criarUsuario();
+  const r = await chamar('PUT', '/api/auth/senha', { token: tokenDe(u), corpo: { senhaAtual: SENHA, novaSenha: 'nova12345' } });
+  assert.equal(r.status, 200);
+  assert.ok(bcrypt.compareSync('nova12345', db.users.find(x => x.id === u.id).password));
+});
+
+
+// ---------- SEO / SITE PÚBLICO ----------
+test('site: preços e limites do site batem com os do servidor (fonte única)', async () => {
+  const { PLANOS } = await import('../frontend/src/lib/conteudo.js');
+  const { LIMITES_POR_PLANO, PRECOS_POR_PLANO } = app.__internals;
+  for (const p of PLANOS) {
+    assert.equal(LIMITES_POR_PLANO[p.id], p.limiteAlunos, `limite do plano ${p.id}`);
+    assert.equal(PRECOS_POR_PLANO[p.id], p.preco, `preço do plano ${p.id}`);
+  }
+  assert.deepEqual(PLANOS.map(p => p.limiteAlunos), [150, 250, 350]);
+});
+
+test('site: página inicial tem título, descrição, canonical, Open Graph e dados estruturados válidos', async () => {
+  const html = await (await fetch(base + '/')).text();
+  assert.match(html, /<title>[^<]{20,}<\/title>/);
+  assert.match(html, /<meta name="description" content="[^"]{80,}/);
+  assert.match(html, /<link rel="canonical" href="https?:\/\/[^"]+\/"/);
+  assert.match(html, /property="og:image" content="https?:\/\/[^"]+og-image\.png"/);
+  assert.match(html, /<h1>[^<]+<\/h1>/, 'precisa ter h1 em HTML puro para robôs sem JavaScript');
+  const ld = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
+  assert.ok(ld, 'JSON-LD presente');
+  const tipos = JSON.parse(ld[1])['@graph'].map(x => x['@type']);
+  for (const t of ['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage']) assert.ok(tipos.includes(t), t);
+});
+
+test('site: robots.txt, sitemap.xml e llms.txt são servidos', async () => {
+  const robots = await (await fetch(base + '/robots.txt')).text();
+  assert.match(robots, /Disallow: \/api\//);
+  assert.match(robots, /Sitemap: https?:\/\//);
+  const sitemap = await (await fetch(base + '/sitemap.xml')).text();
+  assert.match(sitemap, /<loc>https?:\/\/[^<]+\/<\/loc>/);
+  const llms = await (await fetch(base + '/llms.txt')).text();
+  assert.match(llms, /R\$ 150/);
+  assert.match(llms, /até 350 alunos/);
+});
+
+test('site: nenhum depoimento inventado na página inicial', async () => {
+  const fonte = require('fs').readFileSync(require('path').join(__dirname, '../frontend/src/pages/LandingPage.jsx'), 'utf-8');
+  assert.doesNotMatch(fonte, /DEPOIMENTOS|IronFit|Box CrossFit Alpha/);
 });
 
 // ---------- utilitários ----------

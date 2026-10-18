@@ -122,7 +122,7 @@ function VencimentoItem({ aluno }) {
       <div className="flex items-center gap-3">
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+          style={{ background: 'linear-gradient(135deg, var(--accent-2), var(--accent))' }}
         >
           {aluno.avatar}
         </div>
@@ -322,10 +322,10 @@ export default function Dashboard() {
         style={{
           background: isAdmin
             ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)'
-            : 'linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(29, 78, 216, 0.05) 100%)',
+            : 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent) 0%, rgba(29, 78, 216, 0.05) 100%)',
           border: isAdmin
             ? '1px solid rgba(245, 158, 11, 0.3)'
-            : '1px solid rgba(37, 99, 235, 0.3)',
+            : '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
         }}
       >
         <div className="flex items-center gap-3">
@@ -334,7 +334,7 @@ export default function Dashboard() {
             style={{
               background: isAdmin
                 ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                : 'linear-gradient(135deg, var(--accent), var(--accent-700))',
             }}
           >
             {isAdmin ? <Crown size={20} color="white" /> : <Sparkles size={20} color="white" />}
@@ -347,8 +347,8 @@ export default function Dashboard() {
               <span
                 className="px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase tracking-wider"
                 style={{
-                  background: isAdmin ? 'rgba(245, 158, 11, 0.2)' : 'rgba(37, 99, 235, 0.2)',
-                  color: isAdmin ? '#fbbf24' : '#60a5fa',
+                  background: isAdmin ? 'rgba(245, 158, 11, 0.2)' : 'color-mix(in srgb, var(--accent) 20%, transparent)',
+                  color: isAdmin ? '#fbbf24' : 'var(--accent-400)',
                 }}
               >
                 {isAdmin ? 'Acesso Master' : `Restam ${diasTrialRestantes} dias`}
@@ -378,7 +378,7 @@ export default function Dashboard() {
           value={metricas.totalAtivos}
           subtitle={`Total: ${metricas.totalAlunos} alunos`}
           icon={Users}
-          gradient="linear-gradient(135deg, #1e3a72, #2563eb)"
+          gradient="linear-gradient(135deg, var(--accent-800), var(--accent))"
           trend="up"
           trendText={metricas.novosEsteMes > 0 ? `+${metricas.novosEsteMes} este mês` : 'Calculado em tempo real'}
         />
@@ -405,7 +405,7 @@ export default function Dashboard() {
           value={`R$ ${ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           subtitle="Faturamento do mês ÷ alunos ativos"
           icon={Activity}
-          gradient="linear-gradient(135deg, #7c3aed, #2563eb)"
+          gradient="linear-gradient(135deg, var(--accent-2), var(--accent))"
           trend="up"
           trendText="Por aluno ativo"
         />
@@ -566,12 +566,12 @@ export default function Dashboard() {
                 content={({ active, payload, label }) => active && payload?.length ? (
                   <div className="rounded-lg px-3 py-2 text-sm shadow-xl" style={{ background: '#1f2937', border: '1px solid rgba(55, 65, 81, 0.6)', color: 'white' }}>
                     <p className="font-semibold">{label}</p>
-                    <p style={{ color: '#60a5fa' }}>{payload[0].value} novo(s) aluno(s)</p>
+                    <p style={{ color: 'var(--accent-400)' }}>{payload[0].value} novo(s) aluno(s)</p>
                   </div>
                 ) : null}
-                cursor={{ fill: 'rgba(96, 165, 250, 0.08)' }}
+                cursor={{ fill: 'color-mix(in srgb, var(--accent-400) 8%, transparent)' }}
               />
-              <Bar dataKey="novos" fill="#60a5fa" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="novos" fill="var(--accent-400)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

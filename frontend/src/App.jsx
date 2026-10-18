@@ -1,22 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ViewModeProvider, useViewMode } from './contexts/ViewModeContext';
 import { apiFetch } from './lib/api';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
-import Dashboard from './pages/Dashboard';
-import Alunos from './pages/Alunos';
-import Financeiro from './pages/Financeiro';
-import Configuracoes from './pages/Configuracoes';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Alunos = lazy(() => import('./pages/Alunos'));
+const Financeiro = lazy(() => import('./pages/Financeiro'));
+const Configuracoes = lazy(() => import('./pages/Configuracoes'));
 import AuthCard from './pages/AuthCard';
-import Setup from './pages/Setup';
-import Assinatura from './pages/Assinatura';
+const Setup = lazy(() => import('./pages/Setup'));
+const Assinatura = lazy(() => import('./pages/Assinatura'));
 import LandingPage from './pages/LandingPage';
-import PlataformaAdmin from './pages/PlataformaAdmin';
-import PaginaLegal from './pages/PaginaLegal';
+const PlataformaAdmin = lazy(() => import('./pages/PlataformaAdmin'));
+const PaginaLegal = lazy(() => import('./pages/PaginaLegal'));
 
 const backend = import.meta.env.VITE_BACKEND;
+
+// Telas internas são carregadas só quando necessárias (a página inicial e o login ficam leves)
+function Carregando() {
+  return (
+    <div role="status" aria-label="Carregando" style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted, #9ca3af)', fontSize: 14 }}>
+      Carregando...
+    </div>
+  );
+}
 
 // Link de indicação (?ref=CODIGO): guarda o código para ser enviado quando a pessoa criar a conta
 try {
@@ -140,15 +149,15 @@ function AppContent() {
   if (billing && !billing.isAdmin) {
     const trialAtivo = billing.subscriptionStatus === 'trial' && billing.trialEndsAt && new Date(billing.trialEndsAt) > new Date();
     const liberado = billing.subscriptionStatus === 'active' || trialAtivo;
-    if (!liberado) return <Assinatura bloqueadoPorAdmin={!!billing.bloqueadoPorAdmin} />;
+    if (!liberado) return <Suspense fallback={<Carregando />}><Assinatura bloqueadoPorAdmin={!!billing.bloqueadoPorAdmin} /></Suspense>;
   }
 
   // Mostrar setup se não houver planos
   if (needsSetup) {
-    return <Setup onComplete={() => {
+    return <Suspense fallback={<Carregando />}><Setup onComplete={() => {
       setNeedsSetup(false);
       setActivePage('dashboard');
-    }} />;
+    }} /></Suspense>;
   }
 
   // Obtém as informações da página ativa
@@ -194,7 +203,9 @@ function AppContent() {
         <main className="flex-1 overflow-y-auto">
           {/* Renderiza a página ativa de forma condicional */}
           {/* A key força re-montagem ao mudar de página (anima entrada) */}
-          <PageComponent key={activePage} searchTerm={buscaGlobal} />
+          <Suspense fallback={<Carregando />}>
+            <PageComponent key={activePage} searchTerm={buscaGlobal} />
+          </Suspense>
         </main>
       </div>
     </div>
@@ -211,7 +222,9 @@ export default function App() {
   if (pathname === '/privacidade' || pathname === '/termos') {
     return (
       <ThemeProvider>
-        <PaginaLegal tipo={pathname === '/termos' ? 'termos' : 'privacidade'} />
+        <Suspense fallback={<Carregando />}>
+          <PaginaLegal tipo={pathname === '/termos' ? 'termos' : 'privacidade'} />
+        </Suspense>
       </ThemeProvider>
     );
   }

@@ -83,17 +83,17 @@ export default function AuthCard({ modoInicial = 'login', onVoltar }) {
 
         .authcard-form-inner { padding: 28px 44px; overflow-y: auto; align-items: stretch; justify-content: flex-start; }
 
-        .authcard-brand-bg { position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(124,58,237,0.35), transparent 50%), linear-gradient(160deg, #1e3a8a 0%, #1e1b4b 55%, #0b1020 100%); }
+        .authcard-brand-bg { position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent-500) 35%, transparent), transparent 55%), radial-gradient(circle at 80% 85%, color-mix(in srgb, var(--accent-2) 35%, transparent), transparent 50%), linear-gradient(160deg, var(--accent-900) 0%, var(--accent-950) 55%, #0b1020 100%); }
         .authcard-brand-bg::after { content: ''; position: absolute; inset: 0; opacity: 0.5; background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 46px); }
         .authcard-brand-icon { position: absolute; right: -30px; bottom: -30px; opacity: 0.08; transform: rotate(-18deg); }
 
         .authcard-toggle-btn { padding: 11px 30px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; border: 1.5px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.06); backdrop-filter: blur(6px); color: #fff; cursor: pointer; transition: all 0.25s; position: relative; z-index: 1; }
-        .authcard-toggle-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .authcard-toggle-btn:hover { background: var(--accent-500); border-color: var(--accent-500); color: #fff; }
 
         .authcard-input { width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 0.85rem; background: var(--surface-alt-1); border: 1px solid var(--border-2); color: var(--text-heading); transition: border-color 0.2s, background 0.2s; }
         .authcard-input.has-icon { padding-left: 40px; }
         .authcard-input::placeholder { color: var(--text-muted); }
-        .authcard-input:focus { outline: none; border-color: #3b82f6; background: var(--surface-alt-2); }
+        .authcard-input:focus { outline: none; border-color: var(--accent-500); background: var(--surface-alt-2); }
         .authcard-label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
         .authcard-input-wrap { position: relative; display: flex; align-items: center; }
         .authcard-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; display: flex; }
@@ -176,7 +176,7 @@ function FormLogin({ onIrCadastro }) {
 
   return (
     <div className="flex flex-col justify-center h-full">
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}>
         <Dumbbell size={22} color="#fff" />
       </div>
       <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-heading)' }}>Bem-vindo de volta</h2>
@@ -204,13 +204,13 @@ function FormLogin({ onIrCadastro }) {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+        <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: 'var(--accent-500)', color: '#fff' }}>
           {loading ? 'Entrando...' : (<>Entrar <ArrowRight size={16} /></>)}
         </button>
       </form>
 
       <button type="button" onClick={onIrCadastro} className="mt-5 text-xs text-center transition-colors md:hidden" style={{ color: 'var(--text-muted)' }}>
-        Não tem conta? <span style={{ color: '#3b82f6', fontWeight: 600 }}>Criar conta grátis</span>
+        Não tem conta? <span style={{ color: 'var(--accent-500)', fontWeight: 600 }}>Criar conta grátis</span>
       </button>
     </div>
   );
@@ -268,7 +268,7 @@ function FormCadastro({ onVoltarLogin }) {
 
   return (
     <>
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-3" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[0.68rem] font-semibold mb-3" style={{ background: 'color-mix(in srgb, var(--accent-500) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-500) 30%, transparent)', color: 'var(--accent-500)' }}>
         <Sparkles size={12} />
         Teste Grátis de 30 Dias
       </div>
@@ -340,7 +340,7 @@ function FormCadastro({ onVoltarLogin }) {
           </div>
         )}
         {success && (
-          <div className="p-3 rounded-lg text-xs font-medium flex items-center gap-2" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
+          <div className="p-3 rounded-lg text-xs font-medium flex items-center gap-2" style={{ background: 'color-mix(in srgb, var(--accent-500) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-500) 30%, transparent)', color: 'var(--accent-500)' }}>
             <CheckCircle2 size={16} />
             Cadastro concluído! Liberando seus 30 dias de teste grátis...
           </div>
@@ -349,23 +349,23 @@ function FormCadastro({ onVoltarLogin }) {
         <label className="flex items-start gap-2 text-[0.7rem] cursor-pointer" style={{ color: 'var(--text-muted)' }}>
           <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)} className="mt-0.5" />
           <span>
-            Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="underline" style={{ color: '#3b82f6' }}>Termos de Uso</a> e
-            a <a href="/privacidade" target="_blank" rel="noreferrer" className="underline" style={{ color: '#3b82f6' }}>Política de Privacidade</a>.
+            Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--accent-500)' }}>Termos de Uso</a> e
+            a <a href="/privacidade" target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--accent-500)' }}>Política de Privacidade</a>.
           </span>
         </label>
 
-        <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+        <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50" style={{ background: 'var(--accent-500)', color: '#fff' }}>
           {loading ? 'Criando sua conta...' : (<>Começar Meus 30 Dias Grátis <ArrowRight size={16} /></>)}
         </button>
 
         <div className="flex items-center justify-around text-[0.68rem]" style={{ color: 'var(--text-muted)' }}>
-          <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: '#3b82f6' }} /> Sem cartão</span>
-          <span className="flex items-center gap-1"><CheckCircle2 size={12} style={{ color: '#60a5fa' }} /> Acesso total</span>
+          <span className="flex items-center gap-1"><ShieldCheck size={12} style={{ color: 'var(--accent-500)' }} /> Sem cartão</span>
+          <span className="flex items-center gap-1"><CheckCircle2 size={12} style={{ color: 'var(--accent-400)' }} /> Acesso total</span>
           <span className="flex items-center gap-1"><Sparkles size={12} style={{ color: '#fbbf24' }} /> Cancele quando quiser</span>
         </div>
 
         <button type="button" onClick={onVoltarLogin} className="w-full text-xs text-center transition-colors md:hidden" style={{ color: 'var(--text-muted)' }}>
-          Já tem conta? <span style={{ color: '#3b82f6', fontWeight: 600 }}>Fazer login</span>
+          Já tem conta? <span style={{ color: 'var(--accent-500)', fontWeight: 600 }}>Fazer login</span>
         </button>
       </form>
     </>

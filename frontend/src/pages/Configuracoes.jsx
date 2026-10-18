@@ -15,11 +15,12 @@ import {
   Share2,
   Download,
   Trash2,
+  KeyRound,
   Sparkles,
   X,
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, ACENTOS } from '../contexts/ThemeContext';
 import { apiFetch } from '../lib/api';
 import ConexaoWhatsapp from '../components/ConexaoWhatsapp';
 
@@ -33,9 +34,9 @@ function SettingItem({ icon: Icon, title, description, children }) {
       <div className="flex items-start gap-3">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-          style={{ background: 'rgba(37, 99, 235, 0.1)' }}
+          style={{ background: 'color-mix(in srgb, var(--accent) 10%, transparent)' }}
         >
-          <Icon size={17} style={{ color: '#60a5fa' }} />
+          <Icon size={17} style={{ color: 'var(--accent-400)' }} />
         </div>
         <div>
           <p className="text-sm font-semibold text-heading">{title}</p>
@@ -53,7 +54,7 @@ function Toggle({ checked, onChange }) {
     <button
       onClick={() => onChange(!checked)}
       className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-      style={{ background: checked ? '#2563eb' : 'var(--border-4)' }}
+      style={{ background: checked ? 'var(--accent)' : 'var(--border-4)' }}
     >
       <span
         className="inline-block w-4 h-4 transform rounded-full bg-white transition-transform shadow-sm"
@@ -111,7 +112,7 @@ function VariaveisMensagem({ textareaRef, value, onChange }) {
   );
 }
 
-const NOMES_PLANO = { starter: 'Starter (até 50 alunos)', pro: 'Pro (até 100 alunos)', business: 'Business (até 250 alunos)' };
+const NOMES_PLANO = { starter: 'Starter (até 150 alunos)', pro: 'Pro (até 250 alunos)', business: 'Business (até 350 alunos)' };
 
 function dadosAcademiaVazios() {
   return { nomeAcademia: '', cnpj: '', telefone: '', endereco: '', chavePix: '', emailAutoEnviar: false };
@@ -122,9 +123,8 @@ function dadosAcademiaVazios() {
  * Tela básica de configurações do sistema.
  */
 export default function Configuracoes() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, accent, setAccent } = useTheme();
   const [config, setConfig] = useState({
-    backupAuto: true,
   });
   const [dadosAcademia, setDadosAcademia] = useState(dadosAcademiaVazios);
   const msg5DiasRef = useRef(null);
@@ -151,6 +151,7 @@ export default function Configuracoes() {
         whatsappHoraEnvio: typeof data.whatsappHoraEnvio === 'number' ? data.whatsappHoraEnvio : 9,
         whatsappDiasMaxAtraso: typeof data.whatsappDiasMaxAtraso === 'number' ? data.whatsappDiasMaxAtraso : 5,
         emailAutoEnviar: !!data.emailAutoEnviar,
+        temPinAdmin: !!data.temPinAdmin,
       }))
       .catch(() => {});
   }, []);
@@ -173,6 +174,31 @@ export default function Configuracoes() {
       setLinkCopiado(true);
       setTimeout(() => setLinkCopiado(false), 2000);
     } catch { window.prompt('Copie o link:', linkIndicacao); }
+  };
+
+  // ===== Senha do modo administrador (PIN) =====
+  const [pinForm, setPinForm] = useState({ senha: '', pin: '' });
+  const [pinMsg, setPinMsg] = useState(null); // { tipo: 'ok' | 'erro', texto }
+  const [salvandoPin, setSalvandoPin] = useState(false);
+
+  const salvarPin = async (remover = false) => {
+    setSalvandoPin(true);
+    setPinMsg(null);
+    try {
+      const res = await apiFetch('/api/conta/pin-admin', {
+        method: 'PUT',
+        body: JSON.stringify({ senha: pinForm.senha, pin: remover ? null : pinForm.pin }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar a senha');
+      setDadosAcademia(prev => ({ ...prev, temPinAdmin: data.temPinAdmin }));
+      setPinForm({ senha: '', pin: '' });
+      setPinMsg({ tipo: 'ok', texto: data.temPinAdmin ? 'Senha do modo administrador salva!' : 'Senha removida: voltará a valer a senha da sua conta.' });
+    } catch (e) {
+      setPinMsg({ tipo: 'erro', texto: e.message });
+    } finally {
+      setSalvandoPin(false);
+    }
   };
 
   // ===== Privacidade: exportar e excluir conta (LGPD) =====
@@ -392,7 +418,7 @@ export default function Configuracoes() {
       {mostrarWowAutomacao && (
         <div
           className="rounded-xl p-4 flex items-start gap-3 animate-[fadeIn_0.3s_ease]"
-          style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)' }}
+          style={{ background: 'color-mix(in srgb, var(--accent-500) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-500) 30%, transparent)' }}
         >
           <Sparkles size={20} className="flex-shrink-0 mt-0.5 text-blue-400" />
           <div className="flex-1">
@@ -414,7 +440,7 @@ export default function Configuracoes() {
       {/* Dados da Academia */}
       <div className="rounded-xl p-5" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
         <div className="flex items-center gap-2 mb-4">
-          <Globe size={17} style={{ color: '#60a5fa' }} />
+          <Globe size={17} style={{ color: 'var(--accent-400)' }} />
           <h4 className="font-semibold text-heading text-sm">Dados da Academia</h4>
         </div>
         <div className="space-y-3">
@@ -602,7 +628,7 @@ export default function Configuracoes() {
       {/* Alterar Senha */}
       <div className="rounded-xl p-5" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
         <div className="flex items-center gap-2 mb-4">
-          <Lock size={17} style={{ color: '#60a5fa' }} />
+          <Lock size={17} style={{ color: 'var(--accent-400)' }} />
           <h4 className="font-semibold text-heading text-sm">Alterar Senha</h4>
         </div>
         <form onSubmit={handleAlterarSenha} className="space-y-3">
@@ -651,7 +677,7 @@ export default function Configuracoes() {
       {/* Notificações */}
       <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
         <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-          <Bell size={17} style={{ color: '#60a5fa' }} />
+          <Bell size={17} style={{ color: 'var(--accent-400)' }} />
           <h4 className="font-semibold text-heading text-sm">Notificações</h4>
         </div>
         <SettingItem icon={Bell} title="Notificações por E-mail" description="Receba alertas de vencimentos por e-mail">
@@ -681,7 +707,7 @@ export default function Configuracoes() {
                 className="flex-1 min-w-0 rounded-lg px-3 py-2 text-xs"
                 style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }} />
               <button onClick={copiarLink} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg flex-shrink-0"
-                style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>
+                style={{ background: 'color-mix(in srgb, var(--accent-500) 12%, transparent)', color: 'var(--accent-400)', border: '1px solid color-mix(in srgb, var(--accent-500) 30%, transparent)' }}>
                 <Copy size={13} /> {linkCopiado ? 'Copiado!' : 'Copiar'}
               </button>
               <a href={`https://wa.me/?text=${encodeURIComponent('Conheça o GymFlow, sistema de gestão para academias, com 30 dias grátis: ' + linkIndicacao)}`}
@@ -704,7 +730,7 @@ export default function Configuracoes() {
       {billingStatus && !billingStatus.isAdmin && (
         <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
           <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-            <CreditCard size={17} style={{ color: '#60a5fa' }} />
+            <CreditCard size={17} style={{ color: 'var(--accent-400)' }} />
             <h4 className="font-semibold text-heading text-sm">Assinatura</h4>
           </div>
 
@@ -792,10 +818,51 @@ export default function Configuracoes() {
         </div>
       )}
 
+      {/* Senha do modo administrador */}
+      <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
+        <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+          <KeyRound size={17} style={{ color: 'var(--accent-400)' }} />
+          <h4 className="font-semibold text-heading text-sm">Senha do modo Administrador</h4>
+        </div>
+        <div className="py-4 space-y-3">
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Quem estiver no <strong>modo Recepcionista</strong> não consegue apagar dados nem acessar Configurações e cobrança. Para voltar ao modo Administrador é preciso digitar esta senha.
+            {dadosAcademia.temPinAdmin
+              ? ' Você já definiu uma senha; pode trocá-la abaixo.'
+              : ' Enquanto você não definir uma, vale a senha da sua conta. Recomendamos criar uma senha curta só para isso (4 a 8 números).'}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input type="password" value={pinForm.senha} onChange={e => setPinForm(f => ({ ...f, senha: e.target.value }))}
+              placeholder="Senha da sua conta (para autorizar)" autoComplete="current-password"
+              className="rounded-lg px-3 py-2 text-xs"
+              style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }} />
+            <input type="password" inputMode="numeric" value={pinForm.pin} onChange={e => setPinForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '').slice(0, 8) }))}
+              placeholder="Nova senha do modo admin (4 a 8 números)" autoComplete="off"
+              className="rounded-lg px-3 py-2 text-xs"
+              style={{ background: 'var(--surface-alt-1)', border: '1px solid var(--border-2)', color: 'var(--text-heading)' }} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => salvarPin(false)} disabled={salvandoPin || !pinForm.senha || pinForm.pin.length < 4}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-40"
+              style={{ background: 'color-mix(in srgb, var(--accent-500) 14%, transparent)', color: 'var(--accent-400)', border: '1px solid color-mix(in srgb, var(--accent-500) 35%, transparent)' }}>
+              <Save size={13} /> {salvandoPin ? 'Salvando...' : 'Salvar senha'}
+            </button>
+            {dadosAcademia.temPinAdmin && (
+              <button onClick={() => salvarPin(true)} disabled={salvandoPin || !pinForm.senha}
+                className="text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-40"
+                style={{ background: 'var(--surface-alt-1)', color: 'var(--text-secondary)', border: '1px solid var(--border-2)' }}>
+                Remover senha
+              </button>
+            )}
+          </div>
+          {pinMsg && <p className="text-xs" style={{ color: pinMsg.tipo === 'ok' ? '#22c55e' : '#f87171' }}>{pinMsg.texto}</p>}
+        </div>
+      </div>
+
       {/* Privacidade e dados (LGPD) */}
       <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
         <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-          <Shield size={17} style={{ color: '#60a5fa' }} />
+          <Shield size={17} style={{ color: 'var(--accent-400)' }} />
           <h4 className="font-semibold text-heading text-sm">Privacidade e meus dados</h4>
         </div>
         <div className="py-4 space-y-3">
@@ -807,7 +874,7 @@ export default function Configuracoes() {
           <div className="flex flex-wrap gap-2">
             <button onClick={handleExportarDados} disabled={processandoPrivacidade}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
-              style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>
+              style={{ background: 'color-mix(in srgb, var(--accent-500) 12%, transparent)', color: 'var(--accent-400)', border: '1px solid color-mix(in srgb, var(--accent-500) 30%, transparent)' }}>
               <Download size={13} /> Baixar meus dados
             </button>
             {!mostrarExcluirConta && (
@@ -851,14 +918,29 @@ export default function Configuracoes() {
       {/* Aparência e Sistema */}
       <div className="rounded-xl px-5 py-2" style={{ background: 'var(--surface-card)', border: '1px solid var(--border-2)' }}>
         <div className="flex items-center gap-2 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-          <Palette size={17} style={{ color: '#60a5fa' }} />
+          <Palette size={17} style={{ color: 'var(--accent-400)' }} />
           <h4 className="font-semibold text-heading text-sm">Sistema</h4>
         </div>
         <SettingItem icon={Palette} title="Modo Escuro" description="Interface com tema escuro (desative para o modo claro)">
           <Toggle checked={theme === 'dark'} onChange={toggleTheme} />
         </SettingItem>
-        <SettingItem icon={Shield} title="Backup Automático" description="Salvar dados automaticamente toda noite">
-          <Toggle checked={config.backupAuto} onChange={() => toggle('backupAuto')} />
+        <SettingItem icon={Palette} title="Cor do sistema" description="Escolha a cor de destaque da interface (botões, menus e gráficos)">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {ACENTOS.map(a => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAccent(a.id)}
+                title={a.nome}
+                aria-label={`Tema ${a.nome}`}
+                aria-pressed={accent === a.id}
+                className="w-7 h-7 rounded-full transition-transform hover:scale-110 flex items-center justify-center"
+                style={{ background: a.cor, outline: accent === a.id ? '2px solid var(--text-heading)' : '2px solid transparent', outlineOffset: 2 }}
+              >
+                {accent === a.id && <CheckCircle2 size={14} color="#fff" />}
+              </button>
+            ))}
+          </div>
         </SettingItem>
       </div>
 

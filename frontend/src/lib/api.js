@@ -26,7 +26,7 @@ export async function apiFetch(path, options = {}) {
   // Token ausente/expirado/inválido: desloga e manda para a tela de login
   if (response.status === 401 || response.status === 403) {
     const clonedBody = await response.clone().json().catch(() => ({}));
-    const pareceProblemaDeToken = /token/i.test(clonedBody.error || '');
+    const pareceProblemaDeToken = /token|sessão encerrada|sessão inválida/i.test(clonedBody.error || '');
     if (pareceProblemaDeToken) {
       localStorage.removeItem('token');
       window.location.reload();

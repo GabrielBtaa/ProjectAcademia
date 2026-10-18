@@ -415,44 +415,130 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.get('/api/auth/verify', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ error: 'Token não fornecido' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
+// ===== Modo administrador x recepcionista (imposto no servidor, dentro do token) =====
+// Token sem a marca "modo" = administrador. Token com modo "recepcionista" não consegue
+// apagar dados, mexer em configurações, cobrança ou conta — mesmo que alguém chame a API direto.
+function assinarToken(user, modo) {
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role, jti: crypto.randomUUID(), ...(modo ? { modo } : {}) },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+async function revogarTokenAtual(req) {
+  if (req.user?.jti && req.user?.exp) {
+    await prisma.tokenRevogado.upsert({
+      where: { jti: req.user.jti }, update: {},
+      create: { jti: req.user.jti, expiraEm: new Date(req.user.exp * 1000) },
     });
+  }
+}
+function somenteModoAdmin(req, res, next) {
+  if (req.user?.modo === 'recepcionista') {
+    return res.status(403).json({ error: 'Disponível apenas no modo administrador.', code: 'ADMIN_MODE_REQUIRED' });
+  }
+  next();
+}
+const MAX_TENTATIVAS_PIN = 5;
+const BLOQUEIO_PIN_MS = 15 * 60 * 1000;
+const modoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+});
 
-    if (!user) {
-      return res.status(401).json({ error: 'Usuário não encontrado' });
-    }
-
+app.get('/api/auth/verify', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
     return res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        nome: user.nome,
-        role: user.role
-      }
+      user: { id: user.id, email: user.email, nome: user.nome, role: user.role },
+      modo: req.user.modo === 'recepcionista' ? 'recepcionista' : 'admin',
     });
   } catch (error) {
-    return res.status(401).json({ error: 'Token inválido' });
+    return res.status(401).json({ error: 'Sessão inválida' });
   }
 });
 
-app.put('/api/auth/senha', async (req, res) => {
+// Entra no modo recepcionista (sem senha). O token de administrador é revogado.
+app.post('/api/modo/recepcionista', authenticateToken, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const token = assinarToken(user, 'recepcionista');
+    await revogarTokenAtual(req);
+    res.json({ token, modo: 'recepcionista' });
+  } catch (e) {
+    logErro('Erro ao entrar no modo recepcionista', e);
+    res.status(500).json({ error: 'Erro ao trocar de modo' });
+  }
+});
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+// Volta ao modo administrador: exige a senha do modo admin (PIN) — ou a senha da conta, se
+// nenhum PIN foi criado. Erra 5 vezes e fica bloqueado por 15 minutos.
+app.post('/api/modo/admin', authenticateToken, modoLimiter, async (req, res) => {
+  try {
+    const { pin } = req.body || {};
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (user.pinBloqueadoAte && new Date(user.pinBloqueadoAte) > new Date()) {
+      return res.status(429).json({ error: 'Muitas tentativas incorretas. Tente novamente em alguns minutos.' });
+    }
+    if (!pin) return res.status(400).json({ error: 'Informe a senha' });
+
+    const hashEsperado = user.pinAdminHash || user.password;
+    if (!bcrypt.compareSync(String(pin), hashEsperado)) {
+      const tentativas = (user.pinFalhas || 0) + 1;
+      const bloquear = tentativas >= MAX_TENTATIVAS_PIN;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { pinFalhas: bloquear ? 0 : tentativas, pinBloqueadoAte: bloquear ? new Date(Date.now() + BLOQUEIO_PIN_MS) : null },
+      });
+      return res.status(401).json({ error: user.pinAdminHash ? 'Senha do modo administrador incorreta' : 'Senha incorreta' });
+    }
+    if (user.pinFalhas > 0 || user.pinBloqueadoAte) {
+      await prisma.user.update({ where: { id: user.id }, data: { pinFalhas: 0, pinBloqueadoAte: null } });
+    }
+    const token = assinarToken(user);
+    await revogarTokenAtual(req);
+    res.json({ token, modo: 'admin' });
+  } catch (e) {
+    logErro('Erro ao voltar ao modo administrador', e);
+    res.status(500).json({ error: 'Erro ao trocar de modo' });
+  }
+});
+
+// Cria, troca ou remove o PIN do modo administrador (exige a senha da conta)
+app.put('/api/conta/pin-admin', authenticateToken, somenteModoAdmin, modoLimiter, async (req, res) => {
+  try {
+    const { senha, pin } = req.body || {};
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!senha || !bcrypt.compareSync(String(senha), user.password)) {
+      return res.status(401).json({ error: 'Senha da conta incorreta' });
+    }
+    if (pin === null || pin === '') {
+      await prisma.user.update({ where: { id: user.id }, data: { pinAdminHash: null, pinFalhas: 0, pinBloqueadoAte: null } });
+      return res.json({ ok: true, temPinAdmin: false });
+    }
+    if (!/^\d{4,8}$/.test(String(pin))) {
+      return res.status(400).json({ error: 'A senha do modo administrador deve ter de 4 a 8 números' });
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { pinAdminHash: bcrypt.hashSync(String(pin), 10), pinFalhas: 0, pinBloqueadoAte: null },
+    });
+    res.json({ ok: true, temPinAdmin: true });
+  } catch (e) {
+    logErro('Erro ao salvar PIN do modo administrador', e);
+    res.status(500).json({ error: 'Erro ao salvar a senha' });
+  }
+});
+
+app.put('/api/auth/senha', authenticateToken, somenteModoAdmin, modoLimiter, async (req, res) => {
+  try {
     const { senhaAtual, novaSenha } = req.body || {};
     if (!senhaAtual || !novaSenha) {
       return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
@@ -461,7 +547,7 @@ app.put('/api/auth/senha', async (req, res) => {
       return res.status(400).json({ error: 'A nova senha deve ter ao menos 6 caracteres' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
     const validPassword = bcrypt.compareSync(String(senhaAtual), user.password);
@@ -478,7 +564,7 @@ app.put('/api/auth/senha', async (req, res) => {
 });
 
 // Mapeia cada pacote de venda ao limite de alunos correspondente
-const LIMITES_POR_PLANO = { starter: 50, pro: 100, business: 250 };
+const LIMITES_POR_PLANO = { starter: 150, pro: 250, business: 350 };
 
 // Bloqueia acesso aos dados se a conta não tiver assinatura ativa.
 // Contas com role "admin" (a sua) sempre passam, liberado pra teste.
@@ -588,7 +674,7 @@ app.put('/api/planos/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/planos/:id', async (req, res) => {
+app.delete('/api/planos/:id', somenteModoAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID inválido' });
   try {
@@ -907,7 +993,7 @@ app.put('/api/alunos/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/alunos/:id', async (req, res) => {
+app.delete('/api/alunos/:id', somenteModoAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id))
     return res.status(400).json({ error: 'ID inválido' });
@@ -998,7 +1084,7 @@ app.post('/api/pagamentos', async (req, res) => {
 });
 
 // Excluir/estornar um pagamento
-app.delete('/api/pagamentos/:id', async (req, res) => {
+app.delete('/api/pagamentos/:id', somenteModoAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID inválido' });
   try {
@@ -1100,11 +1186,12 @@ app.get('/api/conta/academia', authenticateToken, async (req, res) => {
     whatsappAutoEnviar: user.whatsappAutoEnviar,
     whatsappHoraEnvio: typeof user.whatsappHoraEnvio === 'number' ? user.whatsappHoraEnvio : 9,
     whatsappDiasMaxAtraso: typeof user.whatsappDiasMaxAtraso === 'number' ? user.whatsappDiasMaxAtraso : 5,
+    temPinAdmin: !!user.pinAdminHash,
     emailAutoEnviar: user.emailAutoEnviar,
   });
 });
 
-app.put('/api/conta/academia', authenticateToken, async (req, res) => {
+app.put('/api/conta/academia', authenticateToken, somenteModoAdmin, async (req, res) => {
   const { nomeAcademia, cnpjAcademia, telefoneAcademia, enderecoAcademia, chavePix, whatsappMsg5Dias, whatsappMsgVencido, whatsappAutoEnviar, whatsappHoraEnvio, whatsappDiasMaxAtraso, emailAutoEnviar } = req.body || {};
 
   let diasMaxAtrasoValido;
@@ -1220,7 +1307,7 @@ app.get('/api/plataforma/metricas', authenticateToken, async (req, res) => {
 
 // ===== Painel do dono da plataforma (somente PLATFORM_ADMIN_EMAIL) =====
 function requirePlatformOwner(req, res, next) {
-  if (!process.env.PLATFORM_ADMIN_EMAIL || req.user.email !== process.env.PLATFORM_ADMIN_EMAIL) {
+  if (!process.env.PLATFORM_ADMIN_EMAIL || req.user.email !== process.env.PLATFORM_ADMIN_EMAIL || req.user.modo === 'recepcionista') {
     return res.status(403).json({ error: 'Acesso restrito' });
   }
   next();
@@ -1367,7 +1454,7 @@ async function excluirContaCompleta(user) {
 
 
 // Exporta todos os dados da própria conta (LGPD: direito de acesso e portabilidade)
-app.get('/api/conta/exportar', authenticateToken, async (req, res) => {
+app.get('/api/conta/exportar', authenticateToken, somenteModoAdmin, async (req, res) => {
   try {
     const conta = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -1387,7 +1474,7 @@ app.get('/api/conta/exportar', authenticateToken, async (req, res) => {
 });
 
 // Exclui a própria conta e todos os dados (exige senha + confirmação digitada)
-app.delete('/api/conta', authenticateToken, async (req, res) => {
+app.delete('/api/conta', authenticateToken, somenteModoAdmin, async (req, res) => {
   try {
     const { senha, confirmacao } = req.body || {};
     if (confirmacao !== 'EXCLUIR') return res.status(400).json({ error: 'Digite EXCLUIR para confirmar' });
@@ -1517,7 +1604,7 @@ app.get('/api/billing/status', authenticateToken, async (req, res) => {
 
 // Cancela a assinatura ao final do período já pago (o acesso continua liberado
 // até a data de renovação — não bloqueia na hora, já que o mês já foi pago).
-app.post('/api/billing/cancelar', authenticateToken, async (req, res) => {
+app.post('/api/billing/cancelar', authenticateToken, somenteModoAdmin, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Pagamentos ainda não configurados no servidor' });
   const { motivo } = req.body || {};
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -1542,7 +1629,7 @@ app.post('/api/billing/cancelar', authenticateToken, async (req, res) => {
 });
 
 // Desfaz um cancelamento agendado (a pessoa mudou de ideia antes do fim do período)
-app.post('/api/billing/reativar', authenticateToken, async (req, res) => {
+app.post('/api/billing/reativar', authenticateToken, somenteModoAdmin, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Pagamentos ainda não configurados no servidor' });
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user?.stripeSubscriptionId) {
@@ -1559,7 +1646,7 @@ app.post('/api/billing/reativar', authenticateToken, async (req, res) => {
 });
 
 // Cria uma sessão de Checkout do Stripe para o plano escolhido
-app.post('/api/billing/checkout', authenticateToken, async (req, res) => {
+app.post('/api/billing/checkout', authenticateToken, somenteModoAdmin, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Pagamentos ainda não configurados no servidor' });
   const { plano } = req.body || {};
   const priceId = PRICE_IDS[plano];
@@ -1715,7 +1802,7 @@ app.get('/api/whatsapp/status', authenticateToken, requireActiveSubscription, as
 });
 
 // Cria a instância da academia (na primeira vez) e devolve o QR code para ela escanear
-app.post('/api/whatsapp/conectar', authenticateToken, requireActiveSubscription, whatsappConectarLimiter, async (req, res) => {
+app.post('/api/whatsapp/conectar', authenticateToken, somenteModoAdmin, requireActiveSubscription, whatsappConectarLimiter, async (req, res) => {
   try {
     if (!evolutionConfigurado()) return res.status(503).json({ error: 'Envio por WhatsApp indisponível no momento' });
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -1747,7 +1834,7 @@ app.post('/api/whatsapp/conectar', authenticateToken, requireActiveSubscription,
 });
 
 // Desconecta o número (mantém a instância) e desliga o envio automático
-app.post('/api/whatsapp/desconectar', authenticateToken, requireActiveSubscription, async (req, res) => {
+app.post('/api/whatsapp/desconectar', authenticateToken, somenteModoAdmin, requireActiveSubscription, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (user.whatsappInstancia && evolutionConfigurado()) {
@@ -1802,7 +1889,7 @@ app.get('/api/whatsapp/config', authenticateToken, (req, res) => {
   res.json(config);
 });
 
-app.post('/api/whatsapp/config', authenticateToken, (req, res) => {
+app.post('/api/whatsapp/config', authenticateToken, somenteModoAdmin, (req, res) => {
   const userId = req.user.id;
   const existing = whatsappStore.get(userId) || { logs: [] };
   const updated = {
@@ -2053,7 +2140,7 @@ app.use((req, res) => {
 
 // Vercel serverless handler
 if (process.env.NODE_ENV === 'test') {
-  app.__internals = { dispararNotificacoesParaUsuario, enviarWhatsApp, parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
+  app.__internals = { LIMITES_POR_PLANO, PRECOS_POR_PLANO, dispararNotificacoesParaUsuario, enviarWhatsApp, parseCsvTexto, parseDataFlexivel, escapeHtml, concederRecompensaIndicacao, aplicarCreditosPendentes, gerarCodigoIndicacao };
 }
 
 module.exports = app;

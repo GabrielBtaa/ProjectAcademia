@@ -70,7 +70,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
   const textMuted = isLight ? '#64748b' : '#6b7280';
   const textNavDefault = isLight ? '#475569' : '#9ca3af';
   const surfaceHover = isLight ? '#f1f5f9' : 'rgba(55, 65, 81, 0.35)';
-  const accent = '#2563eb';
+  const accent = 'var(--accent)';
 
   const sigla = getSiglaUsuario(user?.nome);
 
@@ -123,7 +123,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
         <div className="relative flex items-center gap-3 px-4 py-5 flex-shrink-0" style={{ borderBottom: border }}>
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}
           >
             <Dumbbell size={18} color="white" />
           </div>
@@ -168,7 +168,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
                     className={`sb-nav-btn ${isActive ? 'is-active' : ''} w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200`}
                     style={
                       isActive
-                        ? { background: isLight ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.2)', color: isLight ? '#1d4ed8' : '#60a5fa', fontWeight: 600 }
+                        ? { background: isLight ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'color-mix(in srgb, var(--accent) 20%, transparent)', color: isLight ? 'var(--accent-700)' : 'var(--accent-400)', fontWeight: 600 }
                         : { color: textNavDefault }
                     }
                     onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = surfaceHover; e.currentTarget.style.color = isLight ? '#0f172a' : '#e5e7eb'; } }}
@@ -201,7 +201,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
               </span>
               <span
                 className="sb-hide-when-collapsed relative inline-flex items-center rounded-full flex-shrink-0 transition-colors duration-300"
-                style={{ width: 32, height: 18, background: isLight ? 'var(--border-3)' : '#2563eb' }}
+                style={{ width: 32, height: 18, background: isLight ? 'var(--border-3)' : 'var(--accent)' }}
               >
                 <span
                   className="absolute rounded-full bg-white shadow-sm transition-transform duration-300"
@@ -217,7 +217,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
           <div className="flex items-center gap-3 mb-3 px-1">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
             >
               {sigla}
             </div>
@@ -240,9 +240,9 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
 
           <div
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
-            style={{ background: isLight ? 'rgba(37, 99, 235, 0.06)' : 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.15)' }}
+            style={{ background: isLight ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'color-mix(in srgb, var(--accent) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)' }}
           >
-            <p style={{ color: '#2563eb', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.2.0</p>
+            <p style={{ color: 'var(--accent)', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.3.0</p>
           </div>
         </div>
       </aside>

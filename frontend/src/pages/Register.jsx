@@ -96,7 +96,7 @@ export default function Register() {
         
         {/* Badge do Teste Grátis */}
         <div className="flex items-center justify-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold animate-pulse" style={{ background: 'rgba(37, 99, 235, 0.15)', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#60a5fa' }}>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold animate-pulse" style={{ background: 'color-mix(in srgb, var(--accent) 15%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)', color: 'var(--accent-400)' }}>
             <Sparkles size={14} className="text-blue-400" />
             <span>Teste Grátis de 30 Dias · Sem necessidade de cartão de crédito</span>
           </div>
@@ -104,7 +104,7 @@ export default function Register() {
 
         {/* Cabeçalho */}
         <div className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+          <div className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}>
             <Dumbbell size={24} color="white" />
           </div>
           <h2 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
@@ -247,7 +247,7 @@ export default function Register() {
               type="submit"
               disabled={loading}
               className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white shadow-lg flex items-center justify-center gap-2 transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}
             >
               {loading ? (
                 <span>Criando sua conta...</span>

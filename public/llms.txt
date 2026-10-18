@@ -1,0 +1,31 @@
+# GymFlow
+
+> Sistema online para academias: alunos, mensalidades e financeiro com cobrança automática por WhatsApp e e-mail. 30 dias grátis, sem cartão de crédito.
+
+GymFlow é um software online (SaaS) em português do Brasil para donos de academias, estúdios e boxes. Substitui planilhas e controles manuais: cadastra alunos e planos, controla vencimentos e pagamentos e envia lembretes e cobranças automáticas pelo WhatsApp da própria academia e por e-mail.
+
+## Recursos
+- Gestão Completa de Alunos: Controle matriculados, mensalidades em dia, vencimentos e cadastros em uma interface rápida e intuitiva.
+- Controle Financeiro Automático: Registre pagamentos com 1 clique. O sistema estende os vencimentos e calcula o faturamento mensal automaticamente.
+- Gráficos e Métricas em Tempo Real: Visualização nítida de faturamento, alunos ativos vs. inadimplentes e distribuição de matriculados por plano.
+- Cobrança Automática por WhatsApp e E-mail: Cada academia conecta o próprio WhatsApp. O sistema avisa 5 dias antes do vencimento e cobra quem está em atraso, no horário que você escolher.
+
+## Planos e preços
+- Starter: R$ 150 por mês, até 150 alunos
+- Pro: R$ 250 por mês, até 250 alunos
+- Business: R$ 400 por mês, até 350 alunos
+- Todos os planos incluem todos os recursos. 30 dias grátis, sem cartão de crédito. Cancelamento dentro do sistema.
+
+## Perguntas frequentes
+- Como funciona o teste grátis de 30 dias? Ao se cadastrar, sua conta ganha 30 dias de acesso total a todas as ferramentas do GymFlow. Não exigimos cartão de crédito no momento do registro.
+- Preciso instalar algum programa no computador? Não! O GymFlow é 100% online (SaaS). Você e sua equipe podem acessar de qualquer computador, tablet ou celular com internet.
+- Posso cadastrar quantos alunos quiser no período de testes? Sim! Durante os 30 dias grátis, o cadastro de alunos, planos e movimentações financeiras é ilimitado.
+- O que acontece após o término dos 30 dias? Você escolhe um plano para continuar usando: Starter (até 150 alunos), Pro (até 250) ou Business (até 350). Todos os seus dados cadastrados continuam salvos.
+- De qual número de WhatsApp saem as cobranças? Do número da sua própria academia: você conecta o WhatsApp lendo um QR code, como no WhatsApp Web. Os alunos recebem a mensagem de um número que já conhecem.
+- Posso cancelar quando quiser? Sim. O cancelamento é feito dentro do sistema, em Configurações. Você continua com acesso até o fim do período já pago e não há nova cobrança depois.
+- Meus dados estão protegidos? Tratamos os dados de acordo com a LGPD: você pode baixar todos os seus dados ou excluir sua conta a qualquer momento, e o acesso à conta tem proteção contra tentativas de invasão.
+
+## Links
+- [Página inicial](https://projeto-academia-sable.vercel.app/): apresentação, planos e cadastro
+- [Política de Privacidade](https://projeto-academia-sable.vercel.app/privacidade)
+- [Termos de Uso](https://projeto-academia-sable.vercel.app/termos)

@@ -364,7 +364,7 @@ app.put("/api/auth/senha", async (req, res) => {
   }
 });
 
-const LIMITES_POR_PLANO = { starter: 50, pro: 100, business: 250 };
+const LIMITES_POR_PLANO = { starter: 150, pro: 250, business: 350 };
 
 async function requireActiveSubscription(req, res, next) {
   try {
