@@ -98,9 +98,15 @@ Module._load = carregarOriginal;
 // ---------- Evolution API falso (WhatsApp) ----------
 const fetchReal = globalThis.fetch;
 const chamadasEvolution = [];
+const emailsEnviados = [];
 let estadoEvolution = 'close';
 globalThis.fetch = async (url, opts = {}) => {
   const alvo = String(url);
+  if (alvo.startsWith('https://api.resend.com')) {
+    const corpo = JSON.parse(opts.body);
+    emailsEnviados.push({ para: corpo.to[0], assunto: corpo.subject, html: corpo.html });
+    return new Response(JSON.stringify({ id: 'email-falso' }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }
   if (!alvo.startsWith('http://evolution.test')) return fetchReal(url, opts);
   const caminho = alvo.replace('http://evolution.test', '');
   const metodo = opts.method || 'GET';
@@ -665,6 +671,108 @@ test('site: robots.txt, sitemap.xml e llms.txt são servidos', async () => {
 test('site: nenhum depoimento inventado na página inicial', async () => {
   const fonte = require('fs').readFileSync(require('path').join(__dirname, '../frontend/src/pages/LandingPage.jsx'), 'utf-8');
   assert.doesNotMatch(fonte, /DEPOIMENTOS|IronFit|Box CrossFit Alpha/);
+});
+
+
+// ---------- RECUPERAÇÃO DE SENHA ----------
+const crypto = require('crypto');
+const sha = (x) => crypto.createHash('sha256').update(x).digest('hex');
+async function comResend(fn) {
+  process.env.RESEND_API_KEY = 're_teste';
+  process.env.RESEND_FROM_EMAIL = 'GymFlow <teste@exemplo.com>';
+  try { return await fn(); } finally { delete process.env.RESEND_API_KEY; delete process.env.RESEND_FROM_EMAIL; }
+}
+const tokenAntigo = (u) => jwt.sign({ id: u.id, email: u.email, role: u.role, jti: `old-${u.id}-${Math.random()}`, iat: Math.floor(Date.now() / 1000) - 30 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+test('recuperação: e-mail inexistente e existente recebem a mesma resposta, e só o existente recebe e-mail', async () => {
+  await comResend(async () => {
+    const u = await criarUsuario();
+    const antes = emailsEnviados.length;
+    const inicio = Date.now();
+    const a = await chamar('POST', '/api/auth/esqueci-senha', { corpo: { email: 'ninguem@naoexiste.com' } });
+    assert.ok(Date.now() - inicio >= 1100, 'demora o mesmo tempo mesmo sem conta (não revela quais e-mails existem)');
+    const b = await chamar('POST', '/api/auth/esqueci-senha', { corpo: { email: u.email.toUpperCase() } });
+    assert.equal(a.status, 200);
+    assert.equal(b.status, 200);
+    assert.deepEqual(await a.json(), await b.json());
+    const novos = emailsEnviados.slice(antes);
+    assert.equal(novos.length, 1);
+    assert.equal(novos[0].para, u.email);
+  });
+});
+
+test('recuperação: link com código no #, só o hash fica no banco, vale 1h e não permite spam', async () => {
+  await comResend(async () => {
+    const u = await criarUsuario();
+    const antes = emailsEnviados.length;
+    await chamar('POST', '/api/auth/esqueci-senha', { corpo: { email: u.email } });
+    const email = emailsEnviados[antes];
+    const m = email.html.match(/redefinir-senha#token=([a-f0-9]{64})/);
+    assert.ok(m, 'link com o código após o #');
+    const salvo = db.users.find(x => x.id === u.id);
+    assert.equal(salvo.resetTokenHash, sha(m[1]));
+    assert.notEqual(salvo.resetTokenHash, m[1]);
+    const duracao = new Date(salvo.resetTokenExpiraEm).getTime() - Date.now();
+    assert.ok(duracao > 55 * 60 * 1000 && duracao <= 60 * 60 * 1000);
+    // segundo pedido logo em seguida não manda outro e-mail
+    await chamar('POST', '/api/auth/esqueci-senha', { corpo: { email: u.email } });
+    assert.equal(emailsEnviados.length, antes + 1);
+  });
+});
+
+test('recuperação: redefinir troca a senha, destrava a conta, derruba sessões antigas e o link é de uso único', async () => {
+  await comResend(async () => {
+    const u = await criarUsuario({ failedLoginAttempts: 3, lockedUntil: new Date(Date.now() + 600000) });
+    const antes = emailsEnviados.length;
+    await chamar('POST', '/api/auth/esqueci-senha', { corpo: { email: u.email } });
+    const codigo = emailsEnviados[antes].html.match(/token=([a-f0-9]{64})/)[1];
+    const velha = tokenAntigo(u);
+    assert.equal((await chamar('GET', '/api/alunos', { token: velha })).status, 200);
+
+    const r = await chamar('POST', '/api/auth/redefinir-senha', { corpo: { token: codigo, novaSenha: 'senhaNova99' } });
+    assert.equal(r.status, 200);
+    const salvo = db.users.find(x => x.id === u.id);
+    assert.ok(bcrypt.compareSync('senhaNova99', salvo.password));
+    assert.equal(salvo.resetTokenHash, null);
+    assert.equal(salvo.lockedUntil, null);
+    assert.equal(salvo.failedLoginAttempts, 0);
+    assert.equal((await chamar('GET', '/api/alunos', { token: velha })).status, 401, 'sessão antiga cai');
+    assert.equal((await chamar('GET', '/api/alunos', { token: tokenDe(u) })).status, 200, 'sessão nova vale');
+    // aviso de segurança por e-mail
+    assert.ok(emailsEnviados.some(e => e.para === u.email && /alterada/i.test(e.assunto)));
+    // uso único
+    const de_novo = await chamar('POST', '/api/auth/redefinir-senha', { corpo: { token: codigo, novaSenha: 'outraSenha1' } });
+    assert.equal(de_novo.status, 400);
+    assert.ok(bcrypt.compareSync('senhaNova99', db.users.find(x => x.id === u.id).password));
+  });
+});
+
+test('recuperação: rejeita código inválido, expirado e senha curta', async () => {
+  await comResend(async () => {
+    const u = await criarUsuario();
+    const antes = emailsEnviados.length;
+    await chamar('POST', '/api/auth/esqueci-senha', { corpo: { email: u.email } });
+    const codigo = emailsEnviados[antes].html.match(/token=([a-f0-9]{64})/)[1];
+
+    assert.equal((await chamar('POST', '/api/auth/redefinir-senha', { corpo: { token: 'a'.repeat(64), novaSenha: 'senhaNova99' } })).status, 400);
+    assert.equal((await chamar('POST', '/api/auth/redefinir-senha', { corpo: { token: 'curto', novaSenha: 'senhaNova99' } })).status, 400);
+    assert.equal((await chamar('POST', '/api/auth/redefinir-senha', { corpo: { token: codigo, novaSenha: '123' } })).status, 400);
+
+    db.users.find(x => x.id === u.id).resetTokenExpiraEm = new Date(Date.now() - 1000);
+    assert.equal((await chamar('POST', '/api/auth/redefinir-senha', { corpo: { token: codigo, novaSenha: 'senhaNova99' } })).status, 400);
+    assert.ok(bcrypt.compareSync(SENHA, db.users.find(x => x.id === u.id).password), 'senha não pode mudar');
+  });
+});
+
+test('sessão: trocar a senha em Configurações derruba as outras sessões e mantém esta', async () => {
+  const u = await criarUsuario();
+  const outraSessao = tokenAntigo(u);
+  const r = await chamar('PUT', '/api/auth/senha', { token: tokenDe(u), corpo: { senhaAtual: SENHA, novaSenha: 'trocada123' } });
+  assert.equal(r.status, 200);
+  const { token } = await r.json();
+  assert.ok(token);
+  assert.equal((await chamar('GET', '/api/alunos', { token })).status, 200, 'sessão atual continua');
+  assert.equal((await chamar('GET', '/api/alunos', { token: outraSessao })).status, 401, 'outras sessões caem');
 });
 
 // ---------- utilitários ----------

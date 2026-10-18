@@ -403,6 +403,7 @@ export default function Configuracoes() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Erro ao alterar senha');
 
+      if (data.token) localStorage.setItem('token', data.token); // as outras sessões foram encerradas; esta continua
       setSenhaSucesso(true);
       setSenhaForm({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
       setTimeout(() => setSenhaSucesso(false), 2500);

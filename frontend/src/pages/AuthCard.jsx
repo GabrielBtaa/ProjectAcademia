@@ -164,6 +164,27 @@ function FormLogin({ onIrCadastro }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const [modoEsqueci, setModoEsqueci] = useState(false);
+  const [enviadoEsqueci, setEnviadoEsqueci] = useState(false);
+
+  const handleEsqueci = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(apiUrl('/api/auth/esqueci-senha'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.status === 429) throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+      setEnviadoEsqueci(true);
+    } catch (err) {
+      setError(err.message || 'Não foi possível enviar agora. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,6 +194,46 @@ function FormLogin({ onIrCadastro }) {
     if (!result.success) setError(result.error);
     setLoading(false);
   };
+
+  if (modoEsqueci) {
+    return (
+      <div className="flex flex-col justify-center h-full">
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}>
+          <Lock size={20} color="#fff" />
+        </div>
+        <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-heading)' }}>Esqueceu a senha?</h2>
+        {enviadoEsqueci ? (
+          <>
+            <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+              Se <strong style={{ color: 'var(--text-heading)' }}>{email}</strong> estiver cadastrado, enviamos um link para criar uma nova senha. Ele vale por 1 hora. Confira também a caixa de spam.
+            </p>
+            <button type="button" onClick={() => { setModoEsqueci(false); setEnviadoEsqueci(false); }} className="text-xs font-semibold" style={{ color: 'var(--accent-500)' }}>
+              Voltar ao login
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>Digite seu e-mail e enviaremos um link para criar uma nova senha.</p>
+            <form onSubmit={handleEsqueci} className="space-y-4">
+              <div className="authcard-input-wrap">
+                <span className="authcard-input-icon"><Mail size={15} /></span>
+                <input type="email" required className="authcard-input has-icon" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+              </div>
+              {error && (
+                <div className="p-3 rounded-lg text-xs font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>{error}</div>
+              )}
+              <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl font-bold text-sm disabled:opacity-50" style={{ background: 'var(--accent-500)', color: '#fff' }}>
+                {loading ? 'Enviando...' : 'Enviar link'}
+              </button>
+            </form>
+            <button type="button" onClick={() => { setModoEsqueci(false); setError(''); }} className="mt-4 text-xs font-semibold text-left" style={{ color: 'var(--accent-500)' }}>
+              Voltar ao login
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col justify-center h-full">
@@ -196,6 +257,9 @@ function FormLogin({ onIrCadastro }) {
             <span className="authcard-input-icon"><Lock size={15} /></span>
             <input type="password" required className="authcard-input has-icon" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
           </div>
+          <button type="button" onClick={() => { setModoEsqueci(true); setError(''); }} className="mt-1.5 text-[0.7rem] font-semibold" style={{ color: 'var(--accent-500)' }}>
+            Esqueci minha senha
+          </button>
         </div>
 
         {error && (

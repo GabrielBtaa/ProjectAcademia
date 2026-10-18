@@ -242,7 +242,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
             className="sb-hide-when-collapsed rounded-lg px-3 py-2 text-center whitespace-nowrap"
             style={{ background: isLight ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'color-mix(in srgb, var(--accent) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)' }}
           >
-            <p style={{ color: 'var(--accent)', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.3.0</p>
+            <p style={{ color: 'var(--accent)', fontSize: '0.65rem', fontWeight: 700 }}>Versão 1.4.0</p>
           </div>
         </div>
       </aside>

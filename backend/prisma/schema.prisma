@@ -48,6 +48,10 @@ model User {
   // Programa de indicação
   // Instância do Evolution API (WhatsApp) própria de cada academia
   // Senha (PIN) para sair do modo recepcionista e voltar a administrador
+  // Recuperação de senha (só o hash do token é guardado) e invalidação de sessões antigas
+  resetTokenHash              String?  @unique
+  resetTokenExpiraEm          DateTime?
+  sessoesValidasApartir       DateTime?
   pinAdminHash                String?
   pinFalhas                   Int      @default(0)
   pinBloqueadoAte             DateTime?

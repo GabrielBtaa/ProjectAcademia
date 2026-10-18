@@ -2,45 +2,56 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: GPTBot
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: ClaudeBot
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: Claude-User
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: Claude-SearchBot
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: PerplexityBot
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: Perplexity-User
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: Google-Extended
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 User-agent: Applebot-Extended
 Allow: /
 Disallow: /api/
+Disallow: /redefinir-senha
 
 Sitemap: https://projeto-academia-sable.vercel.app/sitemap.xml

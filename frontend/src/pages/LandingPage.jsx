@@ -357,7 +357,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             <span>•</span>
             <a href="/termos" className="hover:text-blue-400 transition-colors">Termos</a>
             <span>•</span>
-            <span>Versão 1.3.0</span>
+            <span>Versão 1.4.0</span>
           </div>
         </div>
       </footer>

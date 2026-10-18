@@ -15,6 +15,7 @@ const Assinatura = lazy(() => import('./pages/Assinatura'));
 import LandingPage from './pages/LandingPage';
 const PlataformaAdmin = lazy(() => import('./pages/PlataformaAdmin'));
 const PaginaLegal = lazy(() => import('./pages/PaginaLegal'));
+const RedefinirSenha = lazy(() => import('./pages/RedefinirSenha'));
 
 const backend = import.meta.env.VITE_BACKEND;
 
@@ -219,6 +220,15 @@ function AppContent() {
 export default function App() {
   // Páginas públicas legais (acessíveis sem login, por link direto)
   const pathname = window.location.pathname.replace(/\/+$/, '');
+  if (pathname === '/redefinir-senha') {
+    return (
+      <ThemeProvider>
+        <Suspense fallback={<Carregando />}>
+          <RedefinirSenha />
+        </Suspense>
+      </ThemeProvider>
+    );
+  }
   if (pathname === '/privacidade' || pathname === '/termos') {
     return (
       <ThemeProvider>

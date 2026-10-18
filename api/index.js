@@ -146,6 +146,16 @@ function authenticateToken(req, res, next) {
         // Falha na checagem não deve travar todo o sistema; segue autenticado.
       }
     }
+    try {
+      const dono = await prisma.user.findUnique({ where: { id: user.id }, select: { sessoesValidasApartir: true } });
+      if (!dono) return res.status(401).json({ error: 'Sessão inválida. Faça login novamente.' });
+      // Trocar/redefinir a senha encerra todas as sessões abertas antes daquele momento
+      if (dono.sessoesValidasApartir && user.iat < Math.floor(new Date(dono.sessoesValidasApartir).getTime() / 1000)) {
+        return res.status(401).json({ error: 'Sessão encerrada. Faça login novamente.' });
+      }
+    } catch (e) {
+      console.error('Erro ao checar validade da sessão:', e);
+    }
     req.user = user;
     next();
   });
@@ -554,12 +564,101 @@ app.put('/api/auth/senha', authenticateToken, somenteModoAdmin, modoLimiter, asy
     if (!validPassword) return res.status(401).json({ error: 'Senha atual incorreta' });
 
     const hashedPassword = bcrypt.hashSync(String(novaSenha), 10);
-    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, sessoesValidasApartir: new Date() } });
 
-    return res.json({ ok: true });
+    // Outras sessões (inclusive de quem tivesse a senha antiga) caem; esta continua com um token novo
+    return res.json({ ok: true, token: assinarToken(user) });
   } catch (error) {
     console.error('Erro ao alterar senha:', error);
     return res.status(500).json({ error: 'Falha ao alterar senha' });
+  }
+});
+
+// ===== Recuperação de senha (esqueci minha senha) =====
+const recuperacaoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+});
+const sha256 = (texto) => crypto.createHash('sha256').update(texto).digest('hex');
+const dormir = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const urlBaseDoSite = () => (process.env.FRONTEND_ORIGIN || 'https://projeto-academia-sable.vercel.app').split(',')[0].trim().replace(/\/+$/, '');
+const VALIDADE_LINK_REDEFINIR_MS = 60 * 60 * 1000; // 1 hora
+
+// Sempre responde igual (existindo ou não o e-mail) e demora o mesmo tempo, para não revelar
+// quais e-mails têm conta. O link vale 1h e só o hash do código fica guardado no banco.
+app.post('/api/auth/esqueci-senha', recuperacaoLimiter, async (req, res) => {
+  const inicio = Date.now();
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (email && email.length <= 254) {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        // Evita usar o formulário para lotar a caixa de entrada de alguém: 1 e-mail por minuto
+        const pedidoRecente = user.resetTokenExpiraEm && (new Date(user.resetTokenExpiraEm).getTime() - Date.now()) > VALIDADE_LINK_REDEFINIR_MS - 60 * 1000;
+        if (!pedidoRecente) {
+          const codigo = crypto.randomBytes(32).toString('hex');
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { resetTokenHash: sha256(codigo), resetTokenExpiraEm: new Date(Date.now() + VALIDADE_LINK_REDEFINIR_MS) },
+          });
+          // O código vai no "#" do endereço: não aparece em logs de servidor nem no Referer
+          const link = `${urlBaseDoSite()}/redefinir-senha#token=${codigo}`;
+          const html = `
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111827">
+              <h2 style="color:#2563eb">Redefinir sua senha</h2>
+              <p>Olá${user.nome ? ', ' + escapeHtml(String(user.nome).split(' ')[0]) : ''}! Recebemos um pedido para redefinir a senha da sua conta no GymFlow.</p>
+              <p><a href="${link}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Criar nova senha</a></p>
+              <p style="font-size:13px;color:#374151">Este link vale por <strong>1 hora</strong> e só pode ser usado uma vez.</p>
+              <p style="font-size:12px;color:#6b7280">Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>
+            </div>`;
+          await enviarEmail(user.email, 'Redefinição de senha do GymFlow', html)
+            .catch(e => logErro('Erro ao enviar e-mail de redefinição de senha', e));
+        }
+      }
+    }
+  } catch (e) {
+    logErro('Erro em esqueci-senha', e);
+  }
+  const restante = 1200 - (Date.now() - inicio);
+  if (restante > 0) await dormir(restante);
+  res.json({ ok: true, mensagem: 'Se este e-mail estiver cadastrado, enviamos um link para redefinir a senha. Confira também a caixa de spam.' });
+});
+
+app.post('/api/auth/redefinir-senha', recuperacaoLimiter, async (req, res) => {
+  try {
+    const { token, novaSenha } = req.body || {};
+    const INVALIDO = { error: 'Link inválido ou expirado. Peça um novo na tela de login.' };
+    if (typeof token !== 'string' || token.length < 32 || token.length > 200) return res.status(400).json(INVALIDO);
+    if (!novaSenha || String(novaSenha).length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter ao menos 6 caracteres' });
+    }
+    const user = await prisma.user.findUnique({ where: { resetTokenHash: sha256(token) } });
+    if (!user || !user.resetTokenExpiraEm || new Date(user.resetTokenExpiraEm) < new Date()) {
+      return res.status(400).json(INVALIDO);
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: bcrypt.hashSync(String(novaSenha), 10),
+        resetTokenHash: null,
+        resetTokenExpiraEm: null,
+        // Destrava a conta se estava bloqueada por tentativas e derruba sessões antigas
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        sessoesValidasApartir: new Date(),
+      },
+    });
+    // Aviso de segurança (best-effort): se não foi a própria pessoa, ela fica sabendo
+    enviarEmail(user.email, 'Sua senha do GymFlow foi alterada',
+      '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto"><p>A senha da sua conta no GymFlow acabou de ser alterada.</p><p>Se não foi você, redefina a senha novamente e fale com o suporte.</p></div>')
+      .catch(() => {});
+    res.json({ ok: true });
+  } catch (e) {
+    logErro('Erro ao redefinir senha', e);
+    res.status(500).json({ error: 'Erro ao redefinir a senha. Tente novamente.' });
   }
 });
 

@@ -94,7 +94,7 @@ function seoPlugin(site) {
       <noscript>O ${NOME} precisa de JavaScript ativado para funcionar. Ative-o no seu navegador e recarregue a página.</noscript>`
 
   const robots = (() => {
-    const bloco = (agente) => `User-agent: ${agente}\nAllow: /\nDisallow: /api/\n`
+    const bloco = (agente) => `User-agent: ${agente}\nAllow: /\nDisallow: /api/\nDisallow: /redefinir-senha\n`
     const ias = ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-User', 'Claude-SearchBot', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', 'Applebot-Extended']
     return `# ${NOME}: rastreadores de buscadores e de IAs são bem-vindos nas páginas públicas.\n${bloco('*')}\n${ias.map(bloco).join('\n')}\nSitemap: ${site}/sitemap.xml\n`
   })()
