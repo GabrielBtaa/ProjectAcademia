@@ -144,9 +144,16 @@ export default defineConfig(({ mode }) => {
   const site = (process.env.VITE_SITE_URL || env.VITE_SITE_URL || 'https://projeto-academia-sable.vercel.app').replace(/\/+$/, '')
   return {
     plugins: [react(), tailwindcss(), seoPlugin(site)],
+    define: {
+      'exports': {},
+    },
     build: {
       outDir: '../public',
       emptyOutDir: true,
+      target: 'es2020',
+      commonjsOptions: {
+        transformMixedEsModules: true,
+      },
     },
     server: {
       proxy: {
