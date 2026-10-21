@@ -97,10 +97,16 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.get('/api/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ ok: true, db: 'connected', timestamp: new Date().toISOString() });
   } catch (e) {
-    res.status(503).json({ ok: false, db: 'disconnected', error: e.message });
+    return res.status(503).json({ ok: false, db: 'disconnected' });
   }
+  try {
+    // Lê todas as colunas de User: se faltar migration (código novo, banco antigo) isto falha
+    await prisma.user.findFirst();
+  } catch (e) {
+    return res.status(503).json({ ok: false, db: 'connected', schema: 'desatualizado', dica: 'Rode: cd backend && npx prisma migrate deploy' });
+  }
+  res.json({ ok: true, db: 'connected', schema: 'ok', timestamp: new Date().toISOString() });
 });
 
 // SEGURANÇA: limita tentativas de login por IP (defesa básica contra brute-force

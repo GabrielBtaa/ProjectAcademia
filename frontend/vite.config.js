@@ -68,7 +68,7 @@ function seoPlugin(site) {
     <meta name="twitter:description" content="${esc(DESCRICAO)}" />
     <meta name="twitter:image" content="${site}/og-image.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
     <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`
 
   // Conteúdo em HTML puro dentro do #root: robôs que NÃO executam JavaScript (a maioria dos
@@ -144,16 +144,9 @@ export default defineConfig(({ mode }) => {
   const site = (process.env.VITE_SITE_URL || env.VITE_SITE_URL || 'https://projeto-academia-sable.vercel.app').replace(/\/+$/, '')
   return {
     plugins: [react(), tailwindcss(), seoPlugin(site)],
-    define: {
-      'exports': {},
-    },
     build: {
       outDir: '../public',
       emptyOutDir: true,
-      target: 'es2020',
-      commonjsOptions: {
-        transformMixedEsModules: true,
-      },
     },
     server: {
       proxy: {

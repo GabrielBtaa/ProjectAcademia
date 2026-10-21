@@ -47,10 +47,19 @@ const PAGES = {
  * Componente interno que usa o contexto de autenticação
  */
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [needsSetup, setNeedsSetup] = useState(false);
   const [authView, setAuthView] = useState('landing'); // 'landing' | 'login' | 'register'
   const [billing, setBilling] = useState(null);
+  const [billingErro, setBillingErro] = useState(false);
+  const [tentativaBilling, setTentativaBilling] = useState(0);
+  const [demorou, setDemorou] = useState(false);
+
+  // Se o carregamento passar de 12s, mostra opções em vez de um giro infinito
+  useEffect(() => {
+    const t = setTimeout(() => setDemorou(true), 12000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Estado da navegação e sidebar mobile
   const [activePage, setActivePage] = useState('dashboard');
@@ -115,19 +124,48 @@ function AppContent() {
       setBilling(null);
       return;
     }
+    setBillingErro(false);
     apiFetch('/api/billing/status')
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) throw new Error('Erro ao carregar a conta');
+        return res.json();
+      })
       .then(setBilling)
-      .catch(() => setBilling({ subscriptionStatus: 'active', isAdmin: false }));
-  }, [user]);
+      .catch(() => setBillingErro(true));
+  }, [user, tentativaBilling]);
+
+  // Servidor respondeu com erro ao carregar a conta: avisa e deixa tentar de novo (em vez de ficar girando)
+  if (user && billing === null && billingErro) {
+    return (
+      <div className="flex items-center justify-center p-6" style={{ minHeight: '100dvh', background: '#080c18' }}>
+        <div className="text-center max-w-sm">
+          <h1 className="text-lg font-bold" style={{ color: '#f2f4f8' }}>Não foi possível carregar sua conta</h1>
+          <p className="mt-2 text-sm" style={{ color: '#9ca3af' }}>O servidor não respondeu como esperado. Tente novamente em instantes; se continuar, fale com o suporte.</p>
+          <div className="mt-5 flex gap-2 justify-center">
+            <button onClick={() => setTentativaBilling(n => n + 1)} className="btn-primary">Tentar novamente</button>
+            <button onClick={logout} className="btn-secondary">Sair</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Mostra loading enquanto verifica autenticação, plano e assinatura
   if (loading || needsSetup === null || (user && billing === null)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#080c18' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: 'var(--accent)' }}></div>
           <p className="mt-4 text-gray-400">Carregando...</p>
+          {demorou && (
+            <div className="mt-4 text-xs" style={{ color: '#9ca3af' }}>
+              <p>Está demorando mais que o normal.</p>
+              <div className="mt-3 flex gap-2 justify-center">
+                <button onClick={() => window.location.reload()} className="btn-primary">Recarregar</button>
+                {user && <button onClick={logout} className="btn-secondary">Sair</button>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

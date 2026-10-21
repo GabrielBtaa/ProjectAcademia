@@ -16,3 +16,8 @@ jobs:
       # --ignore-scripts: os testes usam um banco falso, não precisam do engine do Prisma
       - run: npm install --ignore-scripts
       - run: npm test
+      # Testes de tela: simulam o app aberto (visitante, logado, recepcionista, erro do servidor)
+      - run: npm install
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend

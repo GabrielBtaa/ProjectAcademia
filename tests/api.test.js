@@ -41,6 +41,7 @@ const fakePrisma = {
   user: {
     findUnique: async ({ where, select }) => comSelect(db.users.find(u => casa(u, where)), select),
     findMany: async ({ select } = {}) => db.users.map(u => comSelect(u, select) || { ...u, _count: { alunos: db.alunos.filter(a => a.ownerId === u.id).length } }),
+    findFirst: async () => { if (fakePrisma.__schemaAntigo) throw new Error('column does not exist'); return clone(db.users[0]); },
     count: async ({ where } = {}) => db.users.filter(u => casa(u, where)).length,
     create: async ({ data }) => {
       const u = {
@@ -153,6 +154,19 @@ test('health check responde ok', async () => {
   const r = await chamar('GET', '/api/health');
   assert.equal(r.status, 200);
   assert.equal((await r.json()).ok, true);
+});
+
+test('health check avisa quando falta rodar migration (schema desatualizado)', async () => {
+  fakePrisma.__schemaAntigo = true;
+  try {
+    const r = await chamar('GET', '/api/health');
+    assert.equal(r.status, 503);
+    const dados = await r.json();
+    assert.equal(dados.schema, 'desatualizado');
+    assert.match(dados.dica, /migrate deploy/);
+  } finally {
+    fakePrisma.__schemaAntigo = false;
+  }
 });
 
 // ---------- LOGIN ----------
