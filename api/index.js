@@ -172,12 +172,24 @@ const fs = require('fs');
 const publicPath = fs.existsSync(path.resolve(__dirname, '../public'))
   ? path.resolve(__dirname, '../public')
   : path.resolve(process.cwd(), 'public');
-app.use(express.static(publicPath, { index: false }));
+// Arquivos com nome-hash (/assets) nunca mudam: cache longo (navegador e CDN da Vercel), assim
+// o site não chama a função do servidor a cada visita. A página (HTML) sempre é revalidada.
+app.use(express.static(publicPath, {
+  index: false,
+  setHeaders: (res, arquivo) => {
+    const sep = path.sep;
+    if (arquivo.includes(`${sep}assets${sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
+    else if (/\.(png|svg|webmanifest)$/.test(arquivo)) res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+    else if (/\.(txt|xml)$/.test(arquivo)) res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    else res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 // "/" serve a aplicação React (index.html)
 app.get('/', (req, res) => {
   const indexPath = path.join(publicPath, 'index.html');
   if (fs.existsSync(indexPath)) {
+    res.setHeader('Cache-Control', 'no-cache');
     return res.sendFile(indexPath);
   }
   return res.status(404).send('Página principal não encontrada');
@@ -2237,6 +2249,7 @@ app.use((req, res) => {
   const indexPath = path.join(publicPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-cache');
     return res.send(fs.readFileSync(indexPath));
   } else {
     return res.status(404).send('Página não encontrada');

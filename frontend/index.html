@@ -7,13 +7,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script>try{var a=localStorage.getItem('gymflow_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}</script>
     <script>
-      // Se o app não abrir em 8s, mostra uma mensagem e o motivo (em vez de uma tela vazia)
+      // Se o app não abrir em 10s, mostra uma mensagem e o motivo (em vez de uma tela vazia)
       (function () {
         var erros = [];
         window.addEventListener('error', function (e) {
           var alvo = e.target || {};
           if (alvo.src || alvo.href) erros.push('Falhou ao carregar: ' + (alvo.src || alvo.href));
-          else if (e.message) erros.push('Erro: ' + e.message);
+          else if (e.message) erros.push('Erro: ' + e.message + ' [' + (e.filename || 'sem arquivo') + ':' + (e.lineno || 0) + ']');
         }, true);
         window.addEventListener('unhandledrejection', function (e) {
           erros.push('Erro: ' + ((e.reason && e.reason.message) || e.reason));
@@ -25,12 +25,20 @@
           d.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:24px;background:#080c18;color:#f2f4f8;font-family:system-ui,sans-serif;text-align:center;z-index:99999';
           d.innerHTML = '<div style="max-width:420px"><h1 style="font-size:20px;margin:0 0 8px">Não foi possível carregar o GymFlow</h1><p style="font-size:14px;color:#9ca3af;margin:0 0 16px">Verifique sua conexão e tente de novo. Se continuar, fale com o suporte.</p><button onclick="location.reload()" style="background:#2563eb;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer">Recarregar</button><pre id="aviso-boot-detalhes" style="margin-top:16px;font-size:11px;color:#6b7280;white-space:pre-wrap;text-align:left"></pre></div>';
           document.body.appendChild(d);
-          document.getElementById('aviso-boot-detalhes').textContent = erros.slice(0, 5).join('\n');
+          var linhas = erros.slice(0, 5);
+          linhas.push('Etapa do app: ' + (window.__gymflowBoot || 'o código do app não chegou a executar'));
+          try {
+            performance.getEntriesByType('resource').filter(function (r) { return r.name.indexOf('/assets/') > -1; }).slice(0, 6).forEach(function (r) {
+              linhas.push(r.name.split('/').pop() + ': ' + Math.round(r.duration) + 'ms' + (r.responseStatus ? ' status ' + r.responseStatus : ''));
+            });
+          } catch (x) {}
+          linhas.push(navigator.userAgent);
+          document.getElementById('aviso-boot-detalhes').textContent = linhas.join('\n');
           // Se o app abrir depois (conexão lenta), o aviso some sozinho
           var iv = setInterval(function () {
             if (!document.getElementById('conteudo-estatico')) { d.remove(); clearInterval(iv); }
           }, 500);
-        }, 8000);
+        }, 10000);
       })();
     </script>
     <!--SEO_HEAD-->

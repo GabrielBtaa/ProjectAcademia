@@ -671,6 +671,38 @@ test('site: página inicial tem título, descrição, canonical, Open Graph e da
   for (const t of ['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage']) assert.ok(tipos.includes(t), t);
 });
 
+
+test('site: todo arquivo que a página inicial carrega existe e é entregue com o tipo certo', async () => {
+  const html = await (await fetch(base + '/')).text();
+  const refs = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map(m => m[1]);
+  assert.ok(refs.length >= 3, 'página precisa referenciar o JS e o CSS gerados');
+  for (const ref of refs) {
+    const r = await fetch(base + ref);
+    assert.equal(r.status, 200, `${ref} deveria existir`);
+    const tipo = r.headers.get('content-type') || '';
+    const corpo = await r.text();
+    if (ref.endsWith('.js')) {
+      assert.match(tipo, /javascript/, `${ref} com tipo ${tipo}`);
+      assert.doesNotMatch(corpo.slice(0, 20), /^</, `${ref} veio como HTML (arquivo ausente?)`);
+      // CommonJS no navegador dá "exports is not defined": o JS entregue tem de ser módulo ES
+      assert.doesNotMatch(corpo, /(^|[^.\w$])module\.exports\s*=|(^|[^.\w$])exports\.[a-zA-Z_$]+\s*=/m, `${ref} parece CommonJS`);
+    } else if (ref.endsWith('.css')) {
+      assert.match(tipo, /css/);
+    }
+  }
+});
+
+test('site: arquivos do build têm cache longo e a página principal nunca fica em cache', async () => {
+  const html = await (await fetch(base + '/')).text();
+  const js = html.match(/src="(\/assets\/index-[^"]+\.js)"/)[1];
+  const rJs = await fetch(base + js);
+  assert.match(rJs.headers.get('cache-control'), /immutable/);
+  assert.match(rJs.headers.get('cache-control'), /s-maxage=31536000/);
+  assert.equal((await fetch(base + '/')).headers.get('cache-control'), 'no-cache');
+  const api = await fetch(base + '/api/health');
+  assert.doesNotMatch(api.headers.get('cache-control') || '', /s-maxage|immutable|max-age=[1-9]/, 'API nunca pode ficar em cache');
+});
+
 test('site: robots.txt, sitemap.xml e llms.txt são servidos', async () => {
   const robots = await (await fetch(base + '/robots.txt')).text();
   assert.match(robots, /Disallow: \/api\//);

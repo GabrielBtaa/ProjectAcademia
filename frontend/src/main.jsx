@@ -1,17 +1,20 @@
-import { StrictMode } from 'react'
+import { Component, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.jsx'
 
-// Monitoramento de erros em produção. Só ativa se VITE_SENTRY_DSN estiver configurada
-// na Vercel (variável de ambiente de build). Não envia dados pessoais por padrão.
+// Marcas de diagnóstico: o aviso de "não foi possível carregar" mostra até onde o app chegou
+window.__gymflowBoot = 'modulos-carregados'
+
+// Monitoramento de erros em produção. O Sentry só é baixado se VITE_SENTRY_DSN existir no build
+// (assim não pesa nem interfere na abertura do site). Não envia dados pessoais por padrão.
 if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-    sendDefaultPii: false,
-    tracesSampleRate: 0,
-  })
+  import('@sentry/react')
+    .then((Sentry) => {
+      Sentry.init({ dsn: import.meta.env.VITE_SENTRY_DSN, sendDefaultPii: false, tracesSampleRate: 0 })
+      window.__gymflowReportarErro = (erro) => Sentry.captureException(erro)
+    })
+    .catch(() => { /* sem Sentry: o app segue normalmente */ })
 }
 
 // Tela mostrada se algo quebrar de forma inesperada (em vez de tela branca)
@@ -25,7 +28,7 @@ function TelaDeErro() {
         </p>
         <button
           onClick={() => window.location.reload()}
-          style={{ background: 'var(--accent)', color: '#fff', border: 0, borderRadius: 10, padding: '12px 22px', fontWeight: 700, cursor: 'pointer' }}
+          style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 10, padding: '12px 22px', fontWeight: 700, cursor: 'pointer' }}
         >
           Recarregar
         </button>
@@ -34,10 +37,21 @@ function TelaDeErro() {
   )
 }
 
+class LimiteDeErro extends Component {
+  state = { erro: null }
+  static getDerivedStateFromError(erro) { return { erro } }
+  componentDidCatch(erro) {
+    window.__gymflowBoot = 'erro-de-render: ' + (erro && erro.message)
+    try { window.__gymflowReportarErro?.(erro) } catch { /* ignora */ }
+  }
+  render() { return this.state.erro ? <TelaDeErro /> : this.props.children }
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Sentry.ErrorBoundary fallback={<TelaDeErro />}>
+    <LimiteDeErro>
       <App />
-    </Sentry.ErrorBoundary>
+    </LimiteDeErro>
   </StrictMode>,
 )
+window.__gymflowBoot = 'render-chamado'
