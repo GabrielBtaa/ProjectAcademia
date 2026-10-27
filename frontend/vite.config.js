@@ -149,7 +149,7 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       rollupOptions: {
         output: {
-          banner: 'var exports = typeof window !== "undefined" ? (window.exports = window.exports || {}) : {};',
+          banner: 'var global = typeof window !== "undefined" ? window : globalThis; var exports = typeof window !== "undefined" ? (window.exports = window.exports || {}) : {}; var require = typeof window !== "undefined" && window.require ? window.require : function(m) { return (typeof window !== "undefined" ? window[m] : {}) || {}; }; var module = typeof window !== "undefined" && window.module ? window.module : { exports: exports };',
         },
       },
     },
