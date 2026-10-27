@@ -152,8 +152,8 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
-          entryFileNames: 'assets/[name]-[hash]-v2.js',
-          chunkFileNames: 'assets/[name]-[hash]-v2.js',
+          entryFileNames: 'assets/[name]-[hash]-v3.js.txt',
+          chunkFileNames: 'assets/[name]-[hash]-v3.js.txt',
         },
       },
     },

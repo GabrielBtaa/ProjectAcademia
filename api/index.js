@@ -178,6 +178,7 @@ app.use(express.static(publicPath, {
   index: false,
   setHeaders: (res, arquivo) => {
     const sep = path.sep;
+    if (arquivo.endsWith('.js.txt')) res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
     if (arquivo.includes(`${sep}assets${sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
     else if (/\.(png|svg|webmanifest)$/.test(arquivo)) res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     else if (/\.(txt|xml)$/.test(arquivo)) res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
