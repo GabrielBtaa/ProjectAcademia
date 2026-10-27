@@ -147,6 +147,11 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: '../public',
       emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          banner: 'var exports = typeof window !== "undefined" ? (window.exports = window.exports || {}) : {};',
+        },
+      },
     },
     server: {
       proxy: {
