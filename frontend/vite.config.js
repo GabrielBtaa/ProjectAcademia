@@ -147,7 +147,9 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: '../public',
       emptyOutDir: true,
-      
+      commonjsOptions: {
+        include: [/lucide-react/, /node_modules/],
+      },
     },
     server: {
       proxy: {
