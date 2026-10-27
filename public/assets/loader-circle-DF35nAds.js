@@ -1,1 +1,0 @@
-import{c as d}from"./index-BHcSPvsq.js";var o=typeof window<"u"?window.exports=window.exports||{}:{},i=typeof window<"u"&&window.require?window.require:function(e){return(typeof window<"u"?window[e]:{})||{}},w=typeof window<"u"&&window.module?window.module:{exports:o};const n=[["path",{d:"M21 12a9 9 0 1 1-6.219-8.56",key:"13zald"}]],t=d("loader-circle",n);export{t as L};
