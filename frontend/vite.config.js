@@ -150,6 +150,12 @@ export default defineConfig(({ mode }) => {
       commonjsOptions: {
         include: [/lucide-react/, /node_modules/],
       },
+      rollupOptions: {
+        output: {
+          entryFileNames: 'assets/[name]-[hash]-v2.js',
+          chunkFileNames: 'assets/[name]-[hash]-v2.js',
+        },
+      },
     },
     server: {
       proxy: {
