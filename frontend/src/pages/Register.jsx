@@ -91,7 +91,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 lg:p-6" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1528 50%, #0a0f1e 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 lg:p-6" style={{ background: 'radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%), linear-gradient(135deg, color-mix(in srgb, #0a0f1e 96%, var(--accent) 4%) 0%, color-mix(in srgb, #0d1528 88%, var(--accent) 12%) 50%, color-mix(in srgb, #0a0f1e 96%, var(--accent) 4%) 100%)' }}>
       <div className="w-full max-w-xl space-y-6">
         
         {/* Badge do Teste Grátis */}
@@ -116,7 +116,7 @@ export default function Register() {
         </div>
 
         {/* Formulário */}
-        <div className="rounded-2xl p-6 lg:p-8 shadow-2xl backdrop-blur-xl" style={{ background: 'rgba(13, 21, 40, 0.85)', border: '1px solid rgba(55, 65, 81, 0.4)' }}>
+        <div className="rounded-2xl p-6 lg:p-8 shadow-2xl backdrop-blur-xl" style={{ background: 'color-mix(in srgb, rgba(13, 21, 40, 0.92) 90%, var(--accent) 10%)', border: '1px solid color-mix(in srgb, rgba(55, 65, 81, 0.4) 78%, var(--accent) 22%)' }}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             
             {/* Nome Completo */}

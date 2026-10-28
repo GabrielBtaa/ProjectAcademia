@@ -107,11 +107,14 @@ export default function Setup({ onComplete }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: 'radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%), linear-gradient(135deg, color-mix(in srgb, #111827 96%, var(--accent) 4%), color-mix(in srgb, #111827 82%, var(--accent) 18%), color-mix(in srgb, #111827 96%, var(--accent) 4%))' }}
+    >
       <div className="max-w-md w-full space-y-8">
         {/* Cabeçalho */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center shadow-lg">
+          <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-700))' }}>
             <Dumbbell size={32} color="white" />
           </div>
           <h1 className="mt-6 text-3xl font-bold text-white">Bem-vindo!</h1>

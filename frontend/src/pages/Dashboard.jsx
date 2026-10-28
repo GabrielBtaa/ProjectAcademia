@@ -322,7 +322,7 @@ export default function Dashboard() {
         style={{
           background: isAdmin
             ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)'
-            : 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent) 0%, rgba(29, 78, 216, 0.05) 100%)',
+            : 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 100%)',
           border: isAdmin
             ? '1px solid rgba(245, 158, 11, 0.3)'
             : '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',

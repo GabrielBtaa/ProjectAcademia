@@ -50,7 +50,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
             </div>
             <div>
               <span className="font-bold text-lg tracking-tight" style={{ color: 'var(--text-heading)' }}>GymFlow</span>
-              <span className="text-[0.65rem] block text-blue-400 font-semibold tracking-wider uppercase">SaaS Fitness</span>
+              <span className="text-[0.65rem] block font-semibold tracking-wider uppercase" style={{ color: 'var(--accent-400)' }}>SaaS Fitness</span>
             </div>
           </div>
 
@@ -94,7 +94,10 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
       {/* ===== Hero Section ===== */}
       <section className="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
         {/* Glow de fundo */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/20 blur-[120px] rounded-full pointer-events-none" />
+        <div
+          className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 blur-[120px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%)' }}
+        />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           
@@ -106,7 +109,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
 
           {/* Título Principal */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight max-w-4xl mx-auto" style={{ color: 'var(--text-heading)' }}>
-            O Sistema de Gestão Definitivo para sua <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Academia ou Estúdio</span>
+            O Sistema de Gestão Definitivo para sua <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, var(--accent-400), var(--accent-300))' }}>Academia ou Estúdio</span>
           </h1>
 
           {/* Subtítulo */}
