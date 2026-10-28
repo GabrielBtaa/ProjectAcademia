@@ -142,7 +142,7 @@ export default function LandingPage({ onOpenLogin, onOpenRegister }) {
 
           {/* Showcase / Preview do Dashboard */}
           <div className="mt-16 relative max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2" style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 30%, transparent) 0%, rgba(13, 21, 40, 0.8) 100%)', border: '1px solid rgba(55, 65, 81, 0.5)' }}>
-            <div className="rounded-xl overflow-hidden p-6 sm:p-8 text-left space-y-6" style={{ background: '#0d1528' }}>
+            <div className="rounded-xl overflow-hidden p-6 sm:p-8 text-left space-y-6" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-2)' }}>
               
               {/* Barra superior simulada do app */}
               <div className="flex items-center justify-between pb-4 border-b border-gray-800">

@@ -40,11 +40,11 @@ export default function Assinatura({ bloqueadoPorAdmin = false }) {
   }, []);
 
   return (
-    <div className="flex items-center justify-center p-6" style={{ background: '#080c18', minHeight: '100dvh' }}>
+    <div className="flex items-center justify-center p-6" style={{ background: 'var(--bg-page)', minHeight: '100dvh' }}>
       <div className="max-w-3xl w-full">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold text-white mb-2">Escolha um plano para continuar</h1>
-          <p style={{ color: '#8890a4' }}>Sua conta ainda não tem uma assinatura ativa no GymFlow.</p>
+          <h1 className="text-2xl font-bold text-heading mb-2">Escolha um plano para continuar</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Sua conta ainda não tem uma assinatura ativa no GymFlow.</p>
         </div>
 
         {bloqueadoPorAdmin && (
@@ -63,12 +63,12 @@ export default function Assinatura({ bloqueadoPorAdmin = false }) {
               key={p.id}
               className="rounded-2xl p-6 flex flex-col"
               style={{
-                background: '#11182c',
-                border: p.destaque ? '1px solid var(--accent-500)' : '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--surface-card)',
+                border: p.destaque ? '1px solid var(--accent-500)' : '1px solid var(--border-2)',
               }}
             >
-              <div className="font-bold text-white mb-1">{p.nome}</div>
-              <div className="text-xs mb-4" style={{ color: '#8890a4' }}>{p.limite}</div>
+              <div className="font-bold text-heading mb-1">{p.nome}</div>
+              <div className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>{p.limite}</div>
               <div className="text-2xl font-bold mb-6" style={{ color: 'var(--accent-500)', fontFamily: 'monospace' }}>{p.preco}</div>
               <button
                 onClick={() => handleAssinar(p.id)}
@@ -76,8 +76,8 @@ export default function Assinatura({ bloqueadoPorAdmin = false }) {
                 className="mt-auto py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2"
                 style={{
                   background: p.destaque ? 'var(--accent-500)' : 'transparent',
-                  color: p.destaque ? '#fff' : 'white',
-                  border: p.destaque ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                  color: p.destaque ? '#fff' : 'var(--text-heading)',
+                  border: p.destaque ? 'none' : '1px solid var(--border-2)',
                 }}
               >
                 {carregando === p.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
@@ -88,7 +88,7 @@ export default function Assinatura({ bloqueadoPorAdmin = false }) {
         </div>
 
         <div className="text-center">
-          <button onClick={logout} className="text-sm underline" style={{ color: '#8890a4' }}>
+          <button onClick={logout} className="text-sm underline" style={{ color: 'var(--text-muted)' }}>
             Sair da conta
           </button>
         </div>

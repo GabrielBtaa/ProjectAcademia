@@ -925,7 +925,7 @@ export default function Configuracoes() {
         <SettingItem icon={Palette} title="Modo Escuro" description="Interface com tema escuro (desative para o modo claro)">
           <Toggle checked={theme === 'dark'} onChange={toggleTheme} />
         </SettingItem>
-        <SettingItem icon={Palette} title="Cor do sistema" description="Escolha a cor de destaque da interface (botões, menus e gráficos)">
+        <SettingItem icon={Palette} title="Tema de cores" description="A cor escolhida também altera os fundos, cartões, bordas, navegação e destaques da interface">
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {ACENTOS.map(a => (
               <button

@@ -47,34 +47,46 @@
 /* Modo escuro é o padrão (mantém a aparência original do app) */
 :root,
 html[data-theme='dark'] {
-  --bg-page: #030712;
-  --surface-card: rgba(22, 27, 39, 0.8);
-  --surface-card-alt: rgba(15, 20, 40, 0.7);
-  --surface-modal: #0d1528;
-  --surface-alt-1: rgba(31, 41, 55, 0.4);
-  --surface-alt-2: rgba(31, 41, 55, 0.5);
-  --surface-alt-3: rgba(31, 41, 55, 0.6);
-  --border-1: rgba(55, 65, 81, 0.3);
-  --border-2: rgba(55, 65, 81, 0.4);
-  --border-3: rgba(55, 65, 81, 0.5);
-  --border-4: rgba(55, 65, 81, 0.6);
+  --bg-page: color-mix(in srgb, #030712 94%, var(--accent) 6%);
+  --surface-card: color-mix(in srgb, rgba(22, 27, 39, 0.8) 92%, var(--accent) 8%);
+  --surface-card-alt: color-mix(in srgb, rgba(15, 20, 40, 0.7) 88%, var(--accent) 12%);
+  --surface-modal: color-mix(in srgb, #0d1528 90%, var(--accent) 10%);
+  --surface-alt-1: color-mix(in srgb, rgba(31, 41, 55, 0.4) 88%, var(--accent) 12%);
+  --surface-alt-2: color-mix(in srgb, rgba(31, 41, 55, 0.5) 88%, var(--accent) 12%);
+  --surface-alt-3: color-mix(in srgb, rgba(31, 41, 55, 0.6) 88%, var(--accent) 12%);
+  --border-1: color-mix(in srgb, rgba(55, 65, 81, 0.3) 78%, var(--accent) 22%);
+  --border-2: color-mix(in srgb, rgba(55, 65, 81, 0.4) 78%, var(--accent) 22%);
+  --border-3: color-mix(in srgb, rgba(55, 65, 81, 0.5) 78%, var(--accent) 22%);
+  --border-4: color-mix(in srgb, rgba(55, 65, 81, 0.6) 78%, var(--accent) 22%);
+  --surface-sidebar: var(--surface-modal);
+  --surface-header: color-mix(in srgb, var(--surface-modal) 88%, transparent);
+  --surface-hover: var(--surface-alt-1);
+  --surface-search: var(--surface-alt-2);
+  --border-sidebar: 1px solid var(--border-2);
+  --border-header: 1px solid var(--border-2);
   --text-heading: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
 }
 
 html[data-theme='light'], html.light {
-  --bg-page: #f6f8fc;
-  --surface-card: #ffffff;
-  --surface-card-alt: #f8fafc;
-  --surface-modal: #ffffff;
-  --surface-alt-1: #f1f5f9;
-  --surface-alt-2: #edf2f7;
-  --surface-alt-3: #e2e8f0;
-  --border-1: #e7edf5;
-  --border-2: #d9e2ef;
-  --border-3: #b9c7d9;
-  --border-4: #7b8ba1;
+  --bg-page: color-mix(in srgb, #f6f8fc 92%, var(--accent) 8%);
+  --surface-card: color-mix(in srgb, #ffffff 95%, var(--accent) 5%);
+  --surface-card-alt: color-mix(in srgb, #f8fafc 92%, var(--accent) 8%);
+  --surface-modal: color-mix(in srgb, #ffffff 96%, var(--accent) 4%);
+  --surface-alt-1: color-mix(in srgb, #f1f5f9 90%, var(--accent) 10%);
+  --surface-alt-2: color-mix(in srgb, #edf2f7 88%, var(--accent) 12%);
+  --surface-alt-3: color-mix(in srgb, #e2e8f0 86%, var(--accent) 14%);
+  --border-1: color-mix(in srgb, #e7edf5 80%, var(--accent) 20%);
+  --border-2: color-mix(in srgb, #d9e2ef 80%, var(--accent) 20%);
+  --border-3: color-mix(in srgb, #b9c7d9 82%, var(--accent) 18%);
+  --border-4: color-mix(in srgb, #7b8ba1 85%, var(--accent) 15%);
+  --surface-sidebar: var(--surface-modal);
+  --surface-header: color-mix(in srgb, var(--surface-modal) 90%, transparent);
+  --surface-hover: var(--surface-alt-1);
+  --surface-search: var(--surface-card-alt);
+  --border-sidebar: 1px solid var(--border-2);
+  --border-header: 1px solid var(--border-2);
   --text-heading: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
@@ -274,9 +286,9 @@ body {
 }
 
 .btn-secondary {
-  background: rgba(55, 65, 81, 0.5);
-  color: #d1d5db;
-  border: 1px solid rgba(75, 85, 99, 0.5);
+  background: var(--surface-alt-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-2);
   padding: 0.5rem 1.25rem;
   border-radius: 8px;
   font-weight: 500;
@@ -288,9 +300,9 @@ body {
   gap: 0.5rem;
 }
 .btn-secondary:hover {
-  background: rgba(75, 85, 99, 0.5);
-  color: white;
-  border-color: rgba(107, 114, 128, 0.8);
+  background: var(--surface-alt-3);
+  color: var(--text-heading);
+  border-color: var(--border-3);
 }
 
 .btn-danger {
@@ -314,10 +326,10 @@ body {
 
 /* Input fields estilizados */
 .input-field {
-  background: rgba(22, 27, 39, 0.8);
-  border: 1px solid rgba(55, 65, 81, 0.6);
+  background: var(--surface-card);
+  border: 1px solid var(--border-2);
   border-radius: 8px;
-  color: white;
+  color: var(--text-heading);
   padding: 0.625rem 0.875rem;
   font-size: 0.875rem;
   width: 100%;
@@ -326,12 +338,12 @@ body {
   font-family: 'Inter', sans-serif;
 }
 .input-field::placeholder {
-  color: rgba(156, 163, 175, 0.6);
+  color: var(--text-muted);
 }
 .input-field:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
-  background: rgba(30, 41, 59, 0.9);
+  background: var(--surface-card-alt);
 }
 
 /* Badge de status */
@@ -416,7 +428,7 @@ html[data-accent='pink'] {
   --accent-300: #f9a8d4; --accent-400: #f472b6; --accent-500: #ec4899; --accent: #db2777;
   --accent-700: #be185d; --accent-800: #9d174d; --accent-900: #831843; --accent-950: #500724; --accent-2: #7c3aed;
 }
-/* As classes blue-*/indigo-* do Tailwind seguem o acento escolhido (azul = padrão, sem override) */
+/* Tailwind blue and indigo utilities follow the selected accent outside the default blue theme. */
 html[data-accent]:not([data-accent='blue']) {
   --color-blue-300: var(--accent-300); --color-blue-400: var(--accent-400); --color-blue-500: var(--accent-500);
   --color-blue-600: var(--accent); --color-blue-700: var(--accent-700); --color-blue-800: var(--accent-800); --color-blue-900: var(--accent-900);

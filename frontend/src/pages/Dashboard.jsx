@@ -564,7 +564,7 @@ export default function Dashboard() {
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} allowDecimals={false} />
               <Tooltip
                 content={({ active, payload, label }) => active && payload?.length ? (
-                  <div className="rounded-lg px-3 py-2 text-sm shadow-xl" style={{ background: '#1f2937', border: '1px solid rgba(55, 65, 81, 0.6)', color: 'white' }}>
+                  <div className="rounded-lg px-3 py-2 text-sm shadow-xl" style={{ background: 'var(--surface-modal)', border: '1px solid var(--border-3)', color: 'var(--text-heading)' }}>
                     <p className="font-semibold">{label}</p>
                     <p style={{ color: 'var(--accent-400)' }}>{payload[0].value} novo(s) aluno(s)</p>
                   </div>

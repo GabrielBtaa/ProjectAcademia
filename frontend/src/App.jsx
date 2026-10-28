@@ -137,7 +137,7 @@ function AppContent() {
   // Servidor respondeu com erro ao carregar a conta: avisa e deixa tentar de novo (em vez de ficar girando)
   if (user && billing === null && billingErro) {
     return (
-      <div className="flex items-center justify-center p-6" style={{ minHeight: '100dvh', background: '#080c18' }}>
+      <div className="flex items-center justify-center p-6" style={{ minHeight: '100dvh', background: 'var(--bg-page)' }}>
         <div className="text-center max-w-sm">
           <h1 className="text-lg font-bold" style={{ color: '#f2f4f8' }}>Não foi possível carregar sua conta</h1>
           <p className="mt-2 text-sm" style={{ color: '#9ca3af' }}>O servidor não respondeu como esperado. Tente novamente em instantes; se continuar, fale com o suporte.</p>
@@ -153,7 +153,7 @@ function AppContent() {
   // Mostra loading enquanto verifica autenticação, plano e assinatura
   if (loading || needsSetup === null || (user && billing === null)) {
     return (
-      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#080c18' }}>
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: 'var(--bg-page)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: 'var(--accent)' }}></div>
           <p className="mt-4 text-gray-400">Carregando...</p>

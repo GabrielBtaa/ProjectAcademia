@@ -64,12 +64,12 @@ export default function Sidebar({ activePage, setActivePage, isOpen, onClose, co
     onClose();
   };
 
-  const bg = isLight ? '#ffffff' : '#0d1528';
-  const border = isLight ? '1px solid #e2e8f0' : '1px solid rgba(55, 65, 81, 0.4)';
-  const textPrimary = isLight ? '#0f172a' : '#ffffff';
-  const textMuted = isLight ? '#64748b' : '#6b7280';
-  const textNavDefault = isLight ? '#475569' : '#9ca3af';
-  const surfaceHover = isLight ? '#f1f5f9' : 'rgba(55, 65, 81, 0.35)';
+  const bg = 'var(--surface-sidebar)';
+  const border = 'var(--border-sidebar)';
+  const textPrimary = 'var(--text-heading)';
+  const textMuted = 'var(--text-muted)';
+  const textNavDefault = 'var(--text-secondary)';
+  const surfaceHover = 'var(--surface-hover)';
   const accent = 'var(--accent)';
 
   const sigla = getSiglaUsuario(user?.nome);

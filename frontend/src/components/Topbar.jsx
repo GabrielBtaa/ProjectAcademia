@@ -121,18 +121,12 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
     if (termo) onSearch?.(termo);
   };
 
-  const bgHeader = isLight
-    ? 'rgba(255, 255, 255, 0.9)'
-    : 'rgba(13, 17, 40, 0.9)';
-
-  const borderHeader = isLight
-    ? '1px solid #e2e8f0'
-    : '1px solid rgba(55, 65, 81, 0.3)';
-
-  const textHeading = isLight ? '#0f172a' : '#ffffff';
-  const textSub = isLight ? '#64748b' : '#6b7280';
-  const btnBg = isLight ? '#f1f5f9' : 'rgba(31, 41, 55, 0.6)';
-  const btnColor = isLight ? '#475569' : '#9ca3af';
+  const bgHeader = 'var(--surface-header)';
+  const borderHeader = 'var(--border-header)';
+  const textHeading = 'var(--text-heading)';
+  const textSub = 'var(--text-muted)';
+  const btnBg = 'var(--surface-alt-2)';
+  const btnColor = 'var(--text-secondary)';
 
   return (
     <>
@@ -170,8 +164,8 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
           onSubmit={handleSubmitBusca}
           className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg"
           style={{
-            background: isLight ? '#f8fafc' : 'rgba(31, 41, 55, 0.8)',
-            border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(55, 65, 81, 0.4)'
+            background: 'var(--surface-search)',
+            border: '1px solid var(--border-2)'
           }}
         >
           <Search size={14} style={{ color: textSub }} />
@@ -208,7 +202,7 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
           onClick={toggleTheme}
           className="p-2 rounded-lg transition-all duration-200"
           style={{ color: btnColor, background: btnBg }}
-          onMouseEnter={e => { e.currentTarget.style.color = isLight ? 'var(--accent-700)' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = isLight ? 'var(--accent-700)' : 'var(--text-heading)'; e.currentTarget.style.background = 'var(--surface-hover)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = btnColor; e.currentTarget.style.background = btnBg; }}
           aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
           title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
@@ -222,7 +216,7 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
             onClick={handleTogglePainel}
             className="relative p-2 rounded-lg transition-all duration-200"
           style={{ color: btnColor, background: btnBg }}
-          onMouseEnter={e => { e.currentTarget.style.color = isLight ? 'var(--accent-700)' : 'white'; e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(55, 65, 81, 0.6)'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = isLight ? 'var(--accent-700)' : 'var(--text-heading)'; e.currentTarget.style.background = 'var(--surface-hover)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = btnColor; e.currentTarget.style.background = btnBg; }}
             aria-label="Notificações"
           >
@@ -241,12 +235,12 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
             <div
               className="absolute right-0 mt-2 w-80 max-w-[90vw] rounded-xl shadow-2xl z-40 animate-fade-in-up"
               style={{
-                background: isLight ? '#ffffff' : '#0d1528',
-                border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(55, 65, 81, 0.5)',
+                background: 'var(--surface-modal)',
+                border: '1px solid var(--border-2)',
                 boxShadow: isLight ? '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' : undefined
               }}
             >
-              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid rgba(55, 65, 81, 0.3)' }}>
+              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-1)' }}>
                 <h4 className="font-semibold text-sm" style={{ color: textHeading }}>Notificações</h4>
                 {notificacoes.length > 0 && (
                   <span className="text-xs" style={{ color: textSub }}>{notificacoes.length} pendente(s)</span>
@@ -265,8 +259,8 @@ export default function Topbar({ title, onMenuClick, onNavigate, onSearch }) {
                       <button
                         key={notif.id}
                         onClick={() => handleClickNotificacao(notif)}
-                        className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${isLight ? 'hover:bg-slate-50' : 'hover:bg-white/[0.03]'}`}
-                        style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid rgba(55, 65, 81, 0.2)' }}
+                        className="w-full text-left px-4 py-3 flex items-start gap-3 transition-colors hover:bg-[var(--surface-hover)]"
+                        style={{ borderBottom: '1px solid var(--border-1)' }}
                       >
                         <Icon size={16} style={{ color: cfg.color, marginTop: 2, flexShrink: 0 }} />
                         <div className="min-w-0">

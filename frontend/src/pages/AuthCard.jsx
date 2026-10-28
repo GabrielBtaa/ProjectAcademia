@@ -376,7 +376,7 @@ function FormCadastro({ onVoltarLogin }) {
           <div>
             <label className="authcard-label">Modelo de Negócio *</label>
             <select className="authcard-input" value={form.modeloNegocio} onChange={e => handleChange('modeloNegocio', e.target.value)}>
-              {MODELOS_NEGOCIO.map(opt => <option key={opt.value} value={opt.value} style={{ background: '#0d1528', color: '#f2f4f8' }}>{opt.label}</option>)}
+              {MODELOS_NEGOCIO.map(opt => <option key={opt.value} value={opt.value} style={{ background: 'var(--surface-modal)', color: 'var(--text-heading)' }}>{opt.label}</option>)}
             </select>
           </div>
         </div>
